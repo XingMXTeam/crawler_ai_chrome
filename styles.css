@@ -1,0 +1,63 @@
+body {
+  width: 300px;
+  padding: 15px;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+  text-align: center;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+#startCrawl {
+  background-color: #4CAF50;
+  color: white;
+}
+
+#startCrawl:hover {
+  background-color: #45a049;
+}
+
+#stopCrawl {
+  background-color: #f44336;
+  color: white;
+}
+
+#stopCrawl:hover {
+  background-color: #da190b;
+}
+
+.status {
+  text-align: center;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+#statusText {
+  margin: 0;
+  color: #666;
+} 
