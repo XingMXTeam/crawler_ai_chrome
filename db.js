@@ -1,6 +1,7 @@
 // IndexedDB 数据库管理
 const DB_VERSION = 1;
 const STORE_NAME = 'crawl_results';
+let dbInstance = null;  // 缓存数据库实例
 
 // 获取当前日期的数据库名称
 function getCurrentDBName() {
@@ -56,8 +57,11 @@ async function deleteOldDatabases() {
 async function initDB() {
     console.log('[DB] Starting database initialization...');
     
-    // 删除旧的数据库
-    await deleteOldDatabases();
+    // 如果已经有数据库实例，直接返回
+    if (dbInstance) {
+        console.log('[DB] Using existing database instance');
+        return dbInstance;
+    }
     
     const DB_NAME = getCurrentDBName();
     
@@ -71,7 +75,15 @@ async function initDB() {
 
         request.onsuccess = (event) => {
             console.log('[DB] Database opened successfully');
-            resolve(event.target.result);
+            dbInstance = event.target.result;
+            
+            // 监听数据库关闭事件
+            dbInstance.onclose = () => {
+                console.log('[DB] Database connection closed');
+                dbInstance = null;
+            };
+            
+            resolve(dbInstance);
         };
 
         request.onupgradeneeded = (event) => {
@@ -100,6 +112,7 @@ async function saveResults(results) {
             const timestamp = new Date().toISOString();
             console.log('[DB] Transaction started, timestamp:', timestamp);
 
+            // 使用单个事务保存所有结果
             const savePromises = results.map((result, index) => {
                 return new Promise((resolve, reject) => {
                     const data = {
@@ -107,7 +120,7 @@ async function saveResults(results) {
                         timestamp,
                         savedAt: new Date().toISOString()
                     };
-                    console.log(`[DB] Saving result ${index + 1}/${results.length}:`, data);
+                    console.log(`[DB] Saving result ${index + 1}/${results.length}`);
 
                     const request = store.add(data);
 
@@ -149,7 +162,7 @@ async function getAllResults() {
             const request = store.getAll();
 
             request.onsuccess = () => {
-                console.log(`[DB] Retrieved ${request.result.length} results:`, request.result);
+                console.log(`[DB] Retrieved ${request.result.length} results`);
                 resolve(request.result);
             };
 

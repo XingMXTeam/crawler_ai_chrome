@@ -50,15 +50,12 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             break;
             
         case 'UPDATE_PROGRESS':
-            // 转发进度更新到popup
+            console.log(`[Background] Progress update: ${message.current}/${message.total}`);
+            // 直接转发进度更新到popup
             chrome.runtime.sendMessage({
                 type: 'UPDATE_PROGRESS',
                 current: message.current,
                 total: message.total
-            }, function(response) {
-                if (chrome.runtime.lastError) {
-                    console.error('[Background] Error forwarding progress update:', chrome.runtime.lastError);
-                }
             });
             sendResponse({ status: 'received' });
             break;

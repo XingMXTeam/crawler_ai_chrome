@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 更新进度显示
   function updateProgress(current, total) {
+    console.log(`[Popup] Updating progress: ${current}/${total}`);
     if (total === 0) {
       currentProgress.textContent = '0/0';
       progressPercentage.textContent = '0%';
@@ -51,6 +52,11 @@ document.addEventListener('DOMContentLoaded', function() {
     currentProgress.textContent = `${current}/${total}`;
     progressPercentage.textContent = `${percentage}%`;
     progressFill.style.width = `${percentage}%`;
+    
+    // 强制重绘进度条
+    progressFill.style.display = 'none';
+    progressFill.offsetHeight; // 触发重绘
+    progressFill.style.display = 'block';
   }
   
   // 更新状态显示
@@ -199,6 +205,8 @@ ${combinedText}`;
   
   // 监听来自background script的消息
   chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    console.log(`[Popup] Received message type: ${message.type}`);
+    
     switch (message.type) {
       case 'CONTENT_SCRIPT_READY':
         updateStatus('Content script is ready');
@@ -206,6 +214,8 @@ ${combinedText}`;
         
       case 'CRAWLING_STARTED':
         updateStatus('Crawling started');
+        isCrawling = true;
+        startButton.disabled = true;
         break;
         
       case 'CRAWLING_DATA':
@@ -234,6 +244,7 @@ ${combinedText}`;
         break;
         
       case 'UPDATE_PROGRESS':
+        console.log(`[Popup] Progress update received: ${message.current}/${message.total}`);
         totalUrls = message.total;
         currentUrlIndex = message.current;
         updateProgress(currentUrlIndex, totalUrls);

@@ -4,6 +4,47 @@ let currentUrlIndex = 0;
 let isCrawling = false;
 let shouldSimulateHuman = false;  // 默认关闭模拟人类行为
 
+// 转发日志到popup
+function forwardLog(message, isError = false) {
+    chrome.runtime.sendMessage({
+        type: 'LOG_MESSAGE',
+        message: message,
+        isError: isError
+    });
+}
+
+// 重写console.log和console.error
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+
+console.log = function(...args) {
+    // 调用原始的console.log
+    originalConsoleLog.apply(console, args);
+    
+    // 将日志转发到popup
+    const message = args.map(arg => {
+        if (typeof arg === 'object') {
+            return JSON.stringify(arg);
+        }
+        return String(arg);
+    }).join(' ');
+    forwardLog(message);
+};
+
+console.error = function(...args) {
+    // 调用原始的console.error
+    originalConsoleError.apply(console, args);
+    
+    // 将错误日志转发到popup
+    const message = args.map(arg => {
+        if (typeof arg === 'object') {
+            return JSON.stringify(arg);
+        }
+        return String(arg);
+    }).join(' ');
+    forwardLog(message, true);
+};
+
 // 核心要爬取的URL列表
 const TWITTER_URLS = [
     // AI/ML 研究机构与公司
@@ -87,21 +128,61 @@ const ADDITIONAL_TWITTER_URLS = [
 ]
 
 // 从storage中恢复状态
-chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman'], function(result) {
-    isCrawling = result.isCrawling || false;
-    currentUrlIndex = result.currentUrlIndex || 0;
-    shouldSimulateHuman = result.shouldSimulateHuman || false;
-    console.log('[Crawler] State restored:', { isCrawling, currentUrlIndex, shouldSimulateHuman });
-});
+function restoreState() {
+    return new Promise((resolve, reject) => {
+        // 首先重置所有状态为默认值
+        isCrawling = false;
+        currentUrlIndex = 0;
+        shouldSimulateHuman = false;
+        crawlingResults = [];
+        
+        chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'crawlingResults'], function(result) {
+            if (chrome.runtime.lastError) {
+                console.error('[Crawler] Error restoring state:', chrome.runtime.lastError);
+                reject(chrome.runtime.lastError);
+                return;
+            }
+            
+            // 恢复所有状态，确保shouldSimulateHuman默认为false
+            isCrawling = result.isCrawling || false;
+            currentUrlIndex = result.currentUrlIndex || 0;
+            shouldSimulateHuman = result.shouldSimulateHuman || false;
+            crawlingResults = result.crawlingResults || [];
+            
+            console.log('[Crawler] State restored from storage:', {
+                isCrawling,
+                currentUrlIndex,
+                shouldSimulateHuman,
+                crawlingResultsLength: crawlingResults.length
+            });
+            
+            // 如果正在爬取，立即开始爬取
+            if (isCrawling) {
+                console.log('[Crawler] Resuming crawling after state restore');
+                crawlCurrentPage();
+            }
+            
+            resolve();
+        });
+    });
+}
 
 // 保存状态到storage
 function saveState() {
-    chrome.storage.local.set({
+    const state = {
         isCrawling,
         currentUrlIndex,
-        shouldSimulateHuman
-    });
+        shouldSimulateHuman,
+        crawlingResults
+    };
+    console.log('[Crawler] Saving state to storage:', state);
+    chrome.storage.local.set(state);
 }
+
+// 初始化时恢复状态
+restoreState().catch(error => {
+    console.error('[Crawler] Failed to restore state:', error);
+});
 
 // 通知background script content script已准备就绪
 chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' }, function(response) {
@@ -300,6 +381,22 @@ async function crawlCurrentPage() {
         });
         
         console.log(`[Crawler] Successfully crawled ${tweetElements.length} tweets`);
+        
+        // 更新进度
+        const nextIndex = currentUrlIndex + 1;
+        console.log(`[Crawler] Updating progress: ${nextIndex}/${TWITTER_URLS.length}`);
+        chrome.runtime.sendMessage({
+            type: 'UPDATE_PROGRESS',
+            current: nextIndex,
+            total: TWITTER_URLS.length
+        }, function(response) {
+            if (chrome.runtime.lastError) {
+                console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
+            } else {
+                console.log('[Crawler] Progress update sent successfully');
+            }
+        });
+        
         return true;
     } catch (error) {
         console.error('[Crawler] Error crawling page:', error);
@@ -313,11 +410,34 @@ async function crawlCurrentPage() {
 
 // 重置所有状态
 function resetState() {
+    // 重置内存中的状态
     isCrawling = false;
     currentUrlIndex = 0;
     shouldSimulateHuman = false;
     crawlingResults = [];
-    saveState();
+    
+    // 重置 localStorage 中的状态
+    chrome.storage.local.remove(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'crawlingResults'], function() {
+        console.log('[Crawler] All states cleared from storage');
+    });
+    
+    // 发送状态重置消息
+    chrome.runtime.sendMessage({ 
+        type: 'STATE_RESET',
+        data: {
+            isCrawling: false,
+            currentUrlIndex: 0,
+            shouldSimulateHuman: false
+        }
+    }, function(response) {
+        if (chrome.runtime.lastError) {
+            console.error('[Crawler] Error sending state reset message:', chrome.runtime.lastError);
+        } else {
+            console.log('[Crawler] State reset message sent successfully');
+        }
+    });
+    
+    console.log('[Crawler] All states have been reset');
 }
 
 // 监听来自popup的消息
@@ -352,11 +472,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }, 100);
     } else if (message.type === 'STOP_CRAWLING') {
         console.log('[Crawler] Received stop crawling command');
-        resetState();  // 停止爬取时重置所有状态
+        // 先停止模拟人类行为
+        shouldSimulateHuman = false;
+        isCrawling = false;
+        saveState();
+        
+        // 确保状态被保存
+        chrome.storage.local.set({
+            shouldSimulateHuman: false,
+            isCrawling: false
+        }, function() {
+            console.log('[Crawler] States saved after stop:', { shouldSimulateHuman, isCrawling });
+        });
+        
+        // 然后重置其他状态
+        resetState();
+        
+        // 发送停止消息
+        chrome.runtime.sendMessage({ type: 'CRAWLING_STOPPED' }, function(response) {
+            if (chrome.runtime.lastError) {
+                console.error('[Crawler] Error sending stopped message:', chrome.runtime.lastError);
+            }
+        });
+        
         sendResponse({ status: 'stopped' });
     } else if (message.type === 'STOP_SIMULATE_HUMAN') {
         console.log('[Crawler] Received stop simulate human command');
         shouldSimulateHuman = false;  // 停止模拟人类行为
+        saveState();  // 保存状态
         sendResponse({ status: 'simulate_human_stopped' });
     } else if (message.type === 'GET_DATA') {
         console.log('[Crawler] Received get data request');
@@ -380,59 +523,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // 页面加载完成后开始爬取
 window.addEventListener('load', async () => {
     console.log('[Crawler] Page loaded, checking if should crawl');
-    console.log('[Crawler] Current state:', { isCrawling, currentUrlIndex });
     
-    // 确保页面加载时关闭模拟
-    // shouldSimulateHuman = false;
-    
-    if (isCrawling) {
-        console.log('[Crawler] Starting crawl on page load');
-        try {
-            const success = await crawlCurrentPage();
-            if (success) {
-                // 发送进度更新
-                chrome.runtime.sendMessage({
-                    type: 'UPDATE_PROGRESS',
-                    current: currentUrlIndex + 1,
-                    total: TWITTER_URLS.length
-                }, function(response) {
-                    if (chrome.runtime.lastError) {
-                        console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
-                    }
-                });
-                
-                currentUrlIndex++;
-                saveState();
-                
-                if (currentUrlIndex < TWITTER_URLS.length) {
-                    console.log(`[Crawler] Moving to next URL: ${TWITTER_URLS[currentUrlIndex]}`);
-                    window.location.href = TWITTER_URLS[currentUrlIndex];
-                } else {
-                    console.log('[Crawler] Finished crawling all URLs');
-                    resetState();  // 使用resetState替代单独的状态重置
-                    chrome.runtime.sendMessage({ type: 'CRAWLING_COMPLETE' }, function(response) {
+    // 从storage中获取最新状态
+    chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman'], function(result) {
+        console.log('[Crawler] Retrieved state from storage:', result);
+        
+        // 更新内存中的状态
+        isCrawling = result.isCrawling || false;
+        currentUrlIndex = result.currentUrlIndex || 0;
+        shouldSimulateHuman = result.shouldSimulateHuman || false;
+        
+        console.log('[Crawler] Current state after update:', { isCrawling, currentUrlIndex, shouldSimulateHuman });
+        
+        if (isCrawling) {
+            console.log('[Crawler] Starting crawl on page load');
+            crawlCurrentPage().then(success => {
+                if (success) {
+                    // 发送进度更新
+                    chrome.runtime.sendMessage({
+                        type: 'UPDATE_PROGRESS',
+                        current: currentUrlIndex + 1,
+                        total: TWITTER_URLS.length
+                    }, function(response) {
                         if (chrome.runtime.lastError) {
-                            console.error('[Crawler] Error sending complete message:', chrome.runtime.lastError);
+                            console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
                         }
                     });
+                    
+                    currentUrlIndex++;
+                    saveState();
+                    
+                    if (currentUrlIndex < TWITTER_URLS.length) {
+                        console.log(`[Crawler] Moving to next URL: ${TWITTER_URLS[currentUrlIndex]}`);
+                        window.location.href = TWITTER_URLS[currentUrlIndex];
+                    } else {
+                        console.log('[Crawler] Finished crawling all URLs');
+                        resetState();  // 使用resetState替代单独的状态重置
+                        chrome.runtime.sendMessage({ type: 'CRAWLING_COMPLETE' }, function(response) {
+                            if (chrome.runtime.lastError) {
+                                console.error('[Crawler] Error sending complete message:', chrome.runtime.lastError);
+                            }
+                        });
+                    }
                 }
-            }
-        } catch (error) {
-            console.error('[Crawler] Error during crawl:', error);
-            chrome.runtime.sendMessage({
-                type: 'CRAWLING_ERROR',
-                error: error.message
-            }, function(response) {
-                if (chrome.runtime.lastError) {
-                    console.error('[Crawler] Error sending error message:', chrome.runtime.lastError);
-                }
+            }).catch(error => {
+                console.error('[Crawler] Error during crawl:', error);
+                chrome.runtime.sendMessage({
+                    type: 'CRAWLING_ERROR',
+                    error: error.message
+                }, function(response) {
+                    if (chrome.runtime.lastError) {
+                        console.error('[Crawler] Error sending error message:', chrome.runtime.lastError);
+                    }
+                });
             });
+        } else {
+            console.log('[Crawler] Not crawling, isCrawling is false');
         }
-    }
+    });
 });
-
-// 添加页面关闭事件监听
-// window.addEventListener('unload', () => {
-//     console.log('[Crawler] Page unloading, resetting all states');
-//     resetState();
-// }); 
