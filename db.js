@@ -1,11 +1,66 @@
 // IndexedDB 数据库管理
-const DB_NAME = 'twitter_crawler_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'crawl_results';
 
+// 获取当前日期的数据库名称
+function getCurrentDBName() {
+    const today = new Date();
+    return `twitter_crawler_db_${today.toISOString().split('T')[0]}`;
+}
+
+// 获取所有数据库名称
+async function getAllDatabaseNames() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.databases();
+        request.onsuccess = (event) => {
+            const databases = event.target.result;
+            const dbNames = databases
+                .filter(db => db.name.startsWith('twitter_crawler_db_'))
+                .map(db => db.name)
+                .sort()
+                .reverse(); // 按日期降序排序
+            resolve(dbNames);
+        };
+        request.onerror = (event) => {
+            reject(event.target.error);
+        };
+    });
+}
+
+// 删除旧的数据库
+async function deleteOldDatabases() {
+    try {
+        const dbNames = await getAllDatabaseNames();
+        // 保留最新的两个数据库
+        const databasesToDelete = dbNames.slice(2);
+        
+        for (const dbName of databasesToDelete) {
+            await new Promise((resolve, reject) => {
+                const request = indexedDB.deleteDatabase(dbName);
+                request.onsuccess = () => {
+                    console.log(`[DB] Deleted old database: ${dbName}`);
+                    resolve();
+                };
+                request.onerror = (event) => {
+                    console.error(`[DB] Error deleting database ${dbName}:`, event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+    } catch (error) {
+        console.error('[DB] Error in deleteOldDatabases:', error);
+    }
+}
+
 // 初始化数据库
-function initDB() {
+async function initDB() {
     console.log('[DB] Starting database initialization...');
+    
+    // 删除旧的数据库
+    await deleteOldDatabases();
+    
+    const DB_NAME = getCurrentDBName();
+    
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 

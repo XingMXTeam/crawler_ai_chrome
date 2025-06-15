@@ -7,32 +7,32 @@ let shouldSimulateHuman = false;  // 默认关闭模拟人类行为
 // 核心要爬取的URL列表
 const TWITTER_URLS = [
     // AI/ML 研究机构与公司
-    "https://x.com/OpenAI",
-    "https://x.com/GoogleAI",
-    "https://x.com/huggingface",
-    "https://x.com/NVIDIAAIDev",
-    "https://x.com/AIatMeta",
-    "https://x.com/AnthropicAI",  // Claude的创建者
+    // "https://x.com/OpenAI",
+    // "https://x.com/GoogleAI",
+    // "https://x.com/huggingface",
+    // "https://x.com/NVIDIAAIDev",
+    // "https://x.com/AIatMeta",
+    // "https://x.com/AnthropicAI",  // Claude的创建者
     // "https://x.com/DeepMind",     // DeepMind官方
 
     // // AI/ML 领域重要人物
-    // "https://x.com/sama",
-    // "https://x.com/AndrewYNg",
-    // "https://x.com/GaryMarcus",
-    // "https://x.com/DrJimFan",
-    // "https://x.com/fchollet",
-    // "https://x.com/ylecun",       // Yann LeCun
-    // "https://x.com/geoffreyhinton", // Geoffrey Hinton
-    // "https://x.com/ylecun",       // Yann LeCun
+    "https://x.com/sama",
+    "https://x.com/AndrewYNg",
+    "https://x.com/GaryMarcus",
+    "https://x.com/DrJimFan",
+    "https://x.com/fchollet",
+    "https://x.com/ylecun",       // Yann LeCun
+    "https://x.com/geoffreyhinton", // Geoffrey Hinton
+    "https://x.com/ylecun",       // Yann LeCun
 
     // // 创新AI公司
-    // "https://x.com/perplexity_ai",
-    // "https://x.com/runwayml",
-    // "https://x.com/midjourney",
-    // "https://x.com/pika_labs",
-    // "https://x.com/ideogram_ai",
-    // "https://x.com/StabilityAI",  // Stable Diffusion
-    // "https://x.com/CharacterAI",  // Character.AI
+    "https://x.com/perplexity_ai",
+    "https://x.com/runwayml",
+    "https://x.com/midjourney",
+    "https://x.com/pika_labs",
+    "https://x.com/ideogram_ai",
+    "https://x.com/StabilityAI",  // Stable Diffusion
+    "https://x.com/CharacterAI",  // Character.AI
 
     // // AI基础设施与工具
     // "https://x.com/LangChainAi",
@@ -87,17 +87,19 @@ const ADDITIONAL_TWITTER_URLS = [
 ]
 
 // 从storage中恢复状态
-chrome.storage.local.get(['isCrawling', 'currentUrlIndex'], function(result) {
+chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman'], function(result) {
     isCrawling = result.isCrawling || false;
     currentUrlIndex = result.currentUrlIndex || 0;
-    console.log('[Crawler] State restored:', { isCrawling, currentUrlIndex });
+    shouldSimulateHuman = result.shouldSimulateHuman || false;
+    console.log('[Crawler] State restored:', { isCrawling, currentUrlIndex, shouldSimulateHuman });
 });
 
 // 保存状态到storage
 function saveState() {
     chrome.storage.local.set({
         isCrawling,
-        currentUrlIndex
+        currentUrlIndex,
+        shouldSimulateHuman
     });
 }
 
