@@ -5,85 +5,180 @@
     <title>Twitter Crawler</title>
     <style>
         body {
-            width: 400px;
-            padding: 10px;
-            font-family: Arial, sans-serif;
+            width: 500px;
+            padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #1DA1F2;
+        }
+        .progress-container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .progress-bar {
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #1DA1F2;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #495057;
         }
         .button-container {
             display: flex;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         button {
-            padding: 8px 16px;
+            padding: 10px 20px;
             font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        button:disabled {
+            background-color: #e9ecef;
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+        #startButton {
             background-color: #1DA1F2;
             color: white;
         }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+        #startButton:hover:not(:disabled) {
+            background-color: #1a91da;
+        }
+        #stopButton {
+            background-color: #dc3545;
+            color: white;
+        }
+        #stopButton:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+        .status-container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
         }
         #status {
-            margin: 10px 0;
+            margin: 0;
             padding: 8px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
+            font-size: 14px;
+            color: #495057;
         }
         #log {
             height: 100px;
             overflow-y: auto;
-            padding: 8px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            font-family: monospace;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
             font-size: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .json-container {
-            margin-bottom: 10px;
+        .data-container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
         }
-        .json-container h3 {
-            margin: 5px 0;
-            font-size: 14px;
+        .data-container h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #212529;
         }
         textarea {
             width: 100%;
-            font-family: monospace;
+            height: 150px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
             font-size: 12px;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
             resize: vertical;
             display: none;
+            margin-bottom: 10px;
         }
         .copy-button {
+            background-color: #28a745;
+            color: white;
             margin-top: 5px;
-            background-color: #4CAF50;
+        }
+        .copy-button:hover:not(:disabled) {
+            background-color: #218838;
         }
         .prompt-button {
-            background-color: #9C27B0;
+            background-color: #6f42c1;
+            color: white;
+        }
+        .prompt-button:hover:not(:disabled) {
+            background-color: #5a32a3;
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>Twitter Crawler</h1>
+    </div>
+    
+    <div class="progress-container">
+        <div class="progress-text">
+            <span id="currentProgress">0/0</span>
+            <span id="progressPercentage">0%</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
     <div class="button-container">
         <button id="startButton">Start Crawling</button>
         <button id="stopButton" disabled>Stop Crawling</button>
     </div>
-    <div id="status">Ready to start</div>
+
+    <div class="status-container">
+        <div id="status">Ready to start</div>
+    </div>
+
     <div id="log"></div>
     
-    <div class="json-container">
+    <div class="data-container">
         <h3>Raw JSON Data:</h3>
         <textarea id="jsonData" readonly></textarea>
         <button id="copyButton" class="copy-button" style="display: none;">Copy JSON</button>
     </div>
     
-    <div class="json-container">
+    <div class="data-container">
         <h3>Generated Prompt:</h3>
         <textarea id="promptData" readonly></textarea>
         <button id="copyPromptButton" class="copy-button" style="display: none;">Copy Prompt</button>

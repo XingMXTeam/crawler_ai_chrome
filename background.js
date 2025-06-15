@@ -12,49 +12,60 @@ function sendLog(message, isError = false) {
 }
 
 // 监听来自content script的消息
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    sendLog(`Received message: ${message.type}`);
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    console.log(`[Background] Received message type: ${message.type}`);
     
     switch (message.type) {
+        case 'CONTENT_SCRIPT_READY':
+            console.log('[Background] Content script is ready');
+            sendResponse({ status: 'received' });
+            break;
+            
         case 'CRAWLING_STARTED':
-            sendLog('Crawling started');
+            console.log('[Background] Crawling started');
+            crawlingResults = []; // 重置结果
+            sendResponse({ status: 'received' });
             break;
             
         case 'CRAWLING_DATA':
-            sendLog(`Received ${message.data.length} tweets`);
+            console.log(`[Background] Received ${message.data.length} tweets`);
             crawlingResults = crawlingResults.concat(message.data);
-            // 保存到storage以防数据丢失
-            chrome.storage.local.set({ crawlingResults }, () => {
-                if (chrome.runtime.lastError) {
-                    sendLog(`Error saving data: ${chrome.runtime.lastError.message}`, true);
-                } else {
-                    sendLog('Data saved to storage successfully');
-                }
-            });
+            sendResponse({ status: 'received' });
             break;
             
         case 'CRAWLING_ERROR':
-            sendLog(`Crawling error: ${message.error}`, true);
+            console.error('[Background] Error:', message.error);
+            sendResponse({ status: 'received' });
             break;
             
         case 'CRAWLING_COMPLETE':
-            sendLog('Crawling completed');
-            sendLog(`Total tweets collected: ${crawlingResults.length}`);
-            if (crawlingResults.length > 0) {
-                // 发送所有数据到popup
-                chrome.runtime.sendMessage({
-                    type: 'CRAWLING_DATA',
-                    data: crawlingResults
-                });
-            } else {
-                sendLog('No results to display', true);
-            }
+            console.log('[Background] Crawling completed');
+            console.log(`[Background] Total tweets collected: ${crawlingResults.length}`);
+            sendResponse({ status: 'received' });
             break;
             
         case 'CRAWLING_STOPPED':
-            sendLog('Crawling stopped');
+            console.log('[Background] Crawling stopped');
+            sendResponse({ status: 'received' });
+            break;
+            
+        case 'UPDATE_PROGRESS':
+            // 转发进度更新到popup
+            chrome.runtime.sendMessage({
+                type: 'UPDATE_PROGRESS',
+                current: message.current,
+                total: message.total
+            }, function(response) {
+                if (chrome.runtime.lastError) {
+                    console.error('[Background] Error forwarding progress update:', chrome.runtime.lastError);
+                }
+            });
+            sendResponse({ status: 'received' });
             break;
     }
+    
+    // 返回true表示会异步发送响应
+    return true;
 });
 
 // 下载结果

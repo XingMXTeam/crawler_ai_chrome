@@ -136,24 +136,28 @@ const TWITTER_URLS = [
 ]   
 
 // 从storage中恢复状态
-chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'crawlingResults'], function(result) {
+chrome.storage.local.get(['isCrawling', 'currentUrlIndex'], function(result) {
     isCrawling = result.isCrawling || false;
     currentUrlIndex = result.currentUrlIndex || 0;
-    crawlingResults = result.crawlingResults || [];
-    console.log('[Crawler] State restored:', { isCrawling, currentUrlIndex, resultsCount: crawlingResults.length });
+    console.log('[Crawler] State restored:', { isCrawling, currentUrlIndex });
 });
 
 // 保存状态到storage
 function saveState() {
     chrome.storage.local.set({
         isCrawling,
-        currentUrlIndex,
-        crawlingResults
+        currentUrlIndex
     });
 }
 
 // 通知background script content script已准备就绪
-chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' });
+chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' }, function(response) {
+    if (chrome.runtime.lastError) {
+        console.error('[Crawler] Error sending ready message:', chrome.runtime.lastError);
+    } else {
+        console.log('[Crawler] Ready message sent successfully');
+    }
+});
 
 // 随机延迟函数
 function randomDelay(min, max) {
@@ -331,6 +335,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         crawlingResults = [];
         saveState();
         
+        // 发送进度更新
+        chrome.runtime.sendMessage({
+            type: 'UPDATE_PROGRESS',
+            current: 0,
+            total: TWITTER_URLS.length
+        }, function(response) {
+            if (chrome.runtime.lastError) {
+                console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
+            }
+        });
+        
         // 立即发送响应
         sendResponse({ status: 'started' });
         
@@ -359,8 +374,20 @@ window.addEventListener('load', async () => {
         try {
             const success = await crawlCurrentPage();
             if (success) {
+                // 发送进度更新
+                chrome.runtime.sendMessage({
+                    type: 'UPDATE_PROGRESS',
+                    current: currentUrlIndex + 1,
+                    total: TWITTER_URLS.length
+                }, function(response) {
+                    if (chrome.runtime.lastError) {
+                        console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
+                    }
+                });
+                
                 currentUrlIndex++;
                 saveState();
+                
                 if (currentUrlIndex < TWITTER_URLS.length) {
                     console.log(`[Crawler] Moving to next URL: ${TWITTER_URLS[currentUrlIndex]}`);
                     window.location.href = TWITTER_URLS[currentUrlIndex];
@@ -368,7 +395,11 @@ window.addEventListener('load', async () => {
                     console.log('[Crawler] Finished crawling all URLs');
                     isCrawling = false;
                     saveState();
-                    chrome.runtime.sendMessage({ type: 'CRAWLING_COMPLETE' });
+                    chrome.runtime.sendMessage({ type: 'CRAWLING_COMPLETE' }, function(response) {
+                        if (chrome.runtime.lastError) {
+                            console.error('[Crawler] Error sending complete message:', chrome.runtime.lastError);
+                        }
+                    });
                 }
             }
         } catch (error) {
@@ -376,6 +407,10 @@ window.addEventListener('load', async () => {
             chrome.runtime.sendMessage({
                 type: 'CRAWLING_ERROR',
                 error: error.message
+            }, function(response) {
+                if (chrome.runtime.lastError) {
+                    console.error('[Crawler] Error sending error message:', chrome.runtime.lastError);
+                }
             });
         }
     }

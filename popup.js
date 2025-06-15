@@ -8,23 +8,43 @@ document.addEventListener('DOMContentLoaded', function() {
   const copyButton = document.getElementById('copyButton');
   const copyPromptButton = document.getElementById('copyPromptButton');
   const generatePromptButton = document.getElementById('generatePromptButton');
+  const currentProgress = document.getElementById('currentProgress');
+  const progressPercentage = document.getElementById('progressPercentage');
+  const progressFill = document.getElementById('progressFill');
   
   let isCrawling = false;
   let retryCount = 0;
   const MAX_RETRIES = 3;
   let currentData = null;
+  let totalUrls = 0;
+  let currentUrlIndex = 0;
+  
+  // 更新进度显示
+  function updateProgress(current, total) {
+    if (total === 0) {
+      currentProgress.textContent = '0/0';
+      progressPercentage.textContent = '0%';
+      progressFill.style.width = '0%';
+      return;
+    }
+    
+    const percentage = Math.round((current / total) * 100);
+    currentProgress.textContent = `${current}/${total}`;
+    progressPercentage.textContent = `${percentage}%`;
+    progressFill.style.width = `${percentage}%`;
+  }
   
   // 更新状态显示
   function updateStatus(message, isError = false) {
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = document.createElement('div');
     logEntry.textContent = `[${timestamp}] ${message}`;
-    logEntry.style.color = isError ? 'red' : 'black';
+    logEntry.style.color = isError ? '#dc3545' : '#495057';
     logDiv.appendChild(logEntry);
     logDiv.scrollTop = logDiv.scrollHeight;
     
     statusDiv.textContent = message;
-    statusDiv.style.color = isError ? 'red' : 'black';
+    statusDiv.style.color = isError ? '#dc3545' : '#495057';
   }
   
   // 显示JSON数据
@@ -158,6 +178,10 @@ ${combinedText}`;
     generatePromptButton.style.display = 'none';
     currentData = null;
     
+    // 重置进度
+    currentUrlIndex = 0;
+    updateProgress(0, 0);
+    
     sendMessageToContentScript({type: 'START_CRAWLING'});
   });
   
@@ -209,6 +233,12 @@ ${combinedText}`;
         
       case 'LOG_MESSAGE':
         updateStatus(message.message, message.isError);
+        break;
+        
+      case 'UPDATE_PROGRESS':
+        totalUrls = message.total;
+        currentUrlIndex = message.current;
+        updateProgress(currentUrlIndex, totalUrls);
         break;
     }
   });
