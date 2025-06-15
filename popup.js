@@ -17,17 +17,23 @@ document.addEventListener('DOMContentLoaded', function() {
   let totalUrls = 0;
   let currentUrlIndex = 0;
   
-  // 从IndexedDB获取数据
-  async function getDataFromIndexedDB() {
+  // 从content script获取数据
+  async function getDataFromContentScript() {
     try {
-      if (!window.dbManager) {
-        throw new Error('Database not initialized');
+      const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+      if (!tab) {
+        throw new Error('No active tab found');
       }
-      const results = await window.dbManager.getAllResults();
-      currentData = results;
-      return results;
+      
+      const response = await chrome.tabs.sendMessage(tab.id, {type: 'GET_DATA'});
+      if (response && response.data) {
+        currentData = response.data;
+        return response.data;
+      } else {
+        throw new Error('No data received from content script');
+      }
     } catch (error) {
-      updateStatus(`Error getting data from IndexedDB: ${error.message}`, true);
+      updateStatus(`Error getting data from content script: ${error.message}`, true);
       return null;
     }
   }
@@ -61,8 +67,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // 生成Prompt
-  function generatePrompt(data) {
+  async function generatePrompt(data) {
     try {
+      // 如果数据为空，从content script获取
+      if (!data || data.length === 0) {
+        data = await getDataFromContentScript();
+        if (!data || data.length === 0) {
+          updateStatus('No data available to generate prompt', true);
+          return;
+        }
+      }
+
       // 处理推文数据
       const tweets = data.map(tweet => ({
         text: tweet.text,
@@ -76,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // 生成提示文本
       const combinedText = tweets.map((text, i) => 
-        `推文 ${i+1}:\n${text.text}\n来源: ${text.url}\n互动数据: 转发 ${text.metrics.retweet} | 回复 ${text.metrics.reply} | 点赞 ${text.metrics.like}`
+        `推文 ${i+1}:\n${text.text}\n来源: ${text.url}`
       ).join('\n\n');
 
       const prompt = `请以科技主编的视角总结以下推文内容，可以详细介绍，要求：
@@ -114,16 +129,7 @@ ${combinedText}`;
   
   // 生成Prompt
   generatePromptButton.addEventListener('click', async function() {
-    if (!currentData) {
-      const data = await getDataFromIndexedDB();
-      if (data) {
-        generatePrompt(data);
-      } else {
-        updateStatus('No data available to generate prompt', true);
-      }
-    } else {
-      generatePrompt(currentData);
-    }
+    await generatePrompt(currentData);
   });
   
   // 发送消息到content script

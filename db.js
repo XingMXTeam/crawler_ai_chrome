@@ -41,10 +41,10 @@ async function saveResults(results) {
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
-            
+
             const timestamp = new Date().toISOString();
             console.log('[DB] Transaction started, timestamp:', timestamp);
-            
+
             const savePromises = results.map((result, index) => {
                 return new Promise((resolve, reject) => {
                     const data = {
@@ -53,9 +53,9 @@ async function saveResults(results) {
                         savedAt: new Date().toISOString()
                     };
                     console.log(`[DB] Saving result ${index + 1}/${results.length}:`, data);
-                    
+
                     const request = store.add(data);
-                    
+
                     request.onsuccess = () => {
                         console.log(`[DB] Successfully saved result ${index + 1}`);
                         resolve();
@@ -136,8 +136,9 @@ async function clearResults() {
 }
 
 // 导出函数
+// 在content script中
 window.dbManager = {
     saveResults,
     getAllResults,
     clearResults
-}; 
+};

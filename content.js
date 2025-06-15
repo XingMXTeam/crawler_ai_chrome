@@ -13,7 +13,7 @@ const TWITTER_URLS = [
     "https://x.com/NVIDIAAIDev",
     "https://x.com/AIatMeta",
     "https://x.com/AnthropicAI",  // Claude的创建者
-    "https://x.com/DeepMind",     // DeepMind官方
+    // "https://x.com/DeepMind",     // DeepMind官方
 
     // // AI/ML 领域重要人物
     // "https://x.com/sama",
@@ -356,6 +356,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('[Crawler] Received stop simulate human command');
         shouldSimulateHuman = false;  // 停止模拟人类行为
         sendResponse({ status: 'simulate_human_stopped' });
+    } else if (message.type === 'GET_DATA') {
+        console.log('[Crawler] Received get data request');
+        // 从window.dbManager获取数据
+        window.dbManager.getAllResults()
+            .then(data => {
+                console.log('[Crawler] Sending data to popup:', data);
+                sendResponse({ data });
+            })
+            .catch(error => {
+                console.error('[Crawler] Error getting data:', error);
+                sendResponse({ error: error.message });
+            });
+        return true;  // 保持消息通道开放以进行异步响应
     }
     
     // 返回true表示会异步发送响应
