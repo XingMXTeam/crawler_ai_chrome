@@ -5,6 +5,7 @@ const STORE_NAME = 'crawl_results';
 
 // 初始化数据库
 function initDB() {
+    console.log('[DB] Starting database initialization...');
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -19,12 +20,14 @@ function initDB() {
         };
 
         request.onupgradeneeded = (event) => {
+            console.log('[DB] Database upgrade needed');
             const db = event.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
+                console.log('[DB] Creating object store:', STORE_NAME);
                 const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
                 store.createIndex('timestamp', 'timestamp', { unique: false });
                 store.createIndex('username', 'username', { unique: false });
-                console.log('[DB] Store created successfully');
+                console.log('[DB] Store and indexes created successfully');
             }
         };
     });
@@ -32,6 +35,7 @@ function initDB() {
 
 // 保存爬取结果
 async function saveResults(results) {
+    console.log('[DB] Starting to save results, count:', results.length);
     try {
         const db = await initDB();
         return new Promise((resolve, reject) => {
@@ -39,22 +43,33 @@ async function saveResults(results) {
             const store = transaction.objectStore(STORE_NAME);
             
             const timestamp = new Date().toISOString();
-            const savePromises = results.map(result => {
+            console.log('[DB] Transaction started, timestamp:', timestamp);
+            
+            const savePromises = results.map((result, index) => {
                 return new Promise((resolve, reject) => {
-                    const request = store.add({
+                    const data = {
                         ...result,
                         timestamp,
                         savedAt: new Date().toISOString()
-                    });
+                    };
+                    console.log(`[DB] Saving result ${index + 1}/${results.length}:`, data);
                     
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
+                    const request = store.add(data);
+                    
+                    request.onsuccess = () => {
+                        console.log(`[DB] Successfully saved result ${index + 1}`);
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        console.error(`[DB] Error saving result ${index + 1}:`, request.error);
+                        reject(request.error);
+                    };
                 });
             });
 
             Promise.all(savePromises)
                 .then(() => {
-                    console.log(`[DB] Successfully saved ${results.length} results`);
+                    console.log(`[DB] Successfully saved all ${results.length} results`);
                     resolve();
                 })
                 .catch(error => {
@@ -70,6 +85,7 @@ async function saveResults(results) {
 
 // 获取所有结果
 async function getAllResults() {
+    console.log('[DB] Starting to get all results');
     try {
         const db = await initDB();
         return new Promise((resolve, reject) => {
@@ -78,7 +94,7 @@ async function getAllResults() {
             const request = store.getAll();
 
             request.onsuccess = () => {
-                console.log(`[DB] Retrieved ${request.result.length} results`);
+                console.log(`[DB] Retrieved ${request.result.length} results:`, request.result);
                 resolve(request.result);
             };
 
@@ -95,6 +111,7 @@ async function getAllResults() {
 
 // 清除所有结果
 async function clearResults() {
+    console.log('[DB] Starting to clear all results');
     try {
         const db = await initDB();
         return new Promise((resolve, reject) => {
@@ -103,7 +120,7 @@ async function clearResults() {
             const request = store.clear();
 
             request.onsuccess = () => {
-                console.log('[DB] All results cleared');
+                console.log('[DB] All results cleared successfully');
                 resolve();
             };
 

@@ -2,6 +2,7 @@
 let crawlingResults = [];
 let currentUrlIndex = 0;
 let isCrawling = false;
+let shouldSimulateHuman = false;  // 默认关闭模拟人类行为
 
 // 核心要爬取的URL列表
 const TWITTER_URLS = [
@@ -14,37 +15,36 @@ const TWITTER_URLS = [
     "https://x.com/AnthropicAI",  // Claude的创建者
     "https://x.com/DeepMind",     // DeepMind官方
 
-    // AI/ML 领域重要人物
-    "https://x.com/sama",
-    "https://x.com/AndrewYNg",
-    "https://x.com/GaryMarcus",
-    "https://x.com/DrJimFan",
-    "https://x.com/fchollet",
-    "https://x.com/ylecun",       // Yann LeCun
-    "https://x.com/geoffreyhinton", // Geoffrey Hinton
-    "https://x.com/ylecun",       // Yann LeCun
+    // // AI/ML 领域重要人物
+    // "https://x.com/sama",
+    // "https://x.com/AndrewYNg",
+    // "https://x.com/GaryMarcus",
+    // "https://x.com/DrJimFan",
+    // "https://x.com/fchollet",
+    // "https://x.com/ylecun",       // Yann LeCun
+    // "https://x.com/geoffreyhinton", // Geoffrey Hinton
+    // "https://x.com/ylecun",       // Yann LeCun
 
-    // 创新AI公司
-    "https://x.com/perplexity_ai",
-    "https://x.com/runwayml",
-    "https://x.com/midjourney",
-    "https://x.com/pika_labs",
-    "https://x.com/ideogram_ai",
-    "https://x.com/StabilityAI",  // Stable Diffusion
-    "https://x.com/CharacterAI",  // Character.AI
+    // // 创新AI公司
+    // "https://x.com/perplexity_ai",
+    // "https://x.com/runwayml",
+    // "https://x.com/midjourney",
+    // "https://x.com/pika_labs",
+    // "https://x.com/ideogram_ai",
+    // "https://x.com/StabilityAI",  // Stable Diffusion
+    // "https://x.com/CharacterAI",  // Character.AI
 
-    // AI基础设施与工具
-    "https://x.com/LangChainAi",
-    "https://x.com/ollama",
-    "https://x.com/CerebrasSystems",
-    "https://x.com/Waymo",
-    "https://x.com/Replicate",    // AI模型部署平台
-    "https://x.com/CohereAI",     // 语言模型API
+    // // AI基础设施与工具
+    // "https://x.com/LangChainAi",
+    // "https://x.com/ollama",
+    // "https://x.com/CerebrasSystems",
+    // "https://x.com/Waymo",
+    // "https://x.com/Replicate",    // AI模型部署平台
+    // "https://x.com/CohereAI",     // 语言模型API
 
-    // AI安全与伦理
-    "https://x.com/StanfordHAI",
-    "https://x.com/AISafetyMemes",
-    // "https://x.com/AlignmentForum" // AI对齐论坛
+    // // AI安全与伦理
+    // "https://x.com/StanfordHAI",
+    // "https://x.com/AISafetyMemes",
 ]
 
 // 额外的优质账号（按需使用）
@@ -119,6 +119,8 @@ function randomDelay(min, max) {
 
 // 模拟人类行为
 async function simulateHumanBehavior() {
+    if (!shouldSimulateHuman) return;  // 如果不需要模拟人类行为，直接返回
+    
     // 随机滚动
     const scrollAmount = Math.floor(Math.random() * 300) + 100;
     window.scrollBy(0, scrollAmount);
@@ -307,6 +309,15 @@ async function crawlCurrentPage() {
     }
 }
 
+// 重置所有状态
+function resetState() {
+    isCrawling = false;
+    currentUrlIndex = 0;
+    shouldSimulateHuman = false;
+    crawlingResults = [];
+    saveState();
+}
+
 // 监听来自popup的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log(`[Crawler] Received message: ${message.type}`);
@@ -314,6 +325,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'START_CRAWLING') {
         console.log('[Crawler] Received start crawling command');
         isCrawling = true;
+        shouldSimulateHuman = true;  // 开始爬取时启用模拟人类行为
         currentUrlIndex = 0;
         crawlingResults = [];
         saveState();
@@ -338,9 +350,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }, 100);
     } else if (message.type === 'STOP_CRAWLING') {
         console.log('[Crawler] Received stop crawling command');
-        isCrawling = false;
-        saveState();
+        resetState();  // 停止爬取时重置所有状态
         sendResponse({ status: 'stopped' });
+    } else if (message.type === 'STOP_SIMULATE_HUMAN') {
+        console.log('[Crawler] Received stop simulate human command');
+        shouldSimulateHuman = false;  // 停止模拟人类行为
+        sendResponse({ status: 'simulate_human_stopped' });
     }
     
     // 返回true表示会异步发送响应
@@ -351,6 +366,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 window.addEventListener('load', async () => {
     console.log('[Crawler] Page loaded, checking if should crawl');
     console.log('[Crawler] Current state:', { isCrawling, currentUrlIndex });
+    
+    // 确保页面加载时关闭模拟
+    // shouldSimulateHuman = false;
     
     if (isCrawling) {
         console.log('[Crawler] Starting crawl on page load');
@@ -376,8 +394,7 @@ window.addEventListener('load', async () => {
                     window.location.href = TWITTER_URLS[currentUrlIndex];
                 } else {
                     console.log('[Crawler] Finished crawling all URLs');
-                    isCrawling = false;
-                    saveState();
+                    resetState();  // 使用resetState替代单独的状态重置
                     chrome.runtime.sendMessage({ type: 'CRAWLING_COMPLETE' }, function(response) {
                         if (chrome.runtime.lastError) {
                             console.error('[Crawler] Error sending complete message:', chrome.runtime.lastError);
@@ -397,4 +414,10 @@ window.addEventListener('load', async () => {
             });
         }
     }
-}); 
+});
+
+// 添加页面关闭事件监听
+// window.addEventListener('unload', () => {
+//     console.log('[Crawler] Page unloading, resetting all states');
+//     resetState();
+// }); 

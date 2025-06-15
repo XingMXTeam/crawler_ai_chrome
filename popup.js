@@ -164,7 +164,6 @@ ${combinedText}`;
     
     isCrawling = true;
     startButton.disabled = true;
-    stopButton.disabled = false;
     updateStatus('Starting crawling...');
     
     // 隐藏Prompt
@@ -185,10 +184,11 @@ ${combinedText}`;
     
     isCrawling = false;
     startButton.disabled = false;
-    stopButton.disabled = true;
     updateStatus('Stopping crawling...');
     
+    // 发送停止爬取和停止模拟人类行为的消息
     sendMessageToContentScript({type: 'STOP_CRAWLING'});
+    sendMessageToContentScript({type: 'STOP_SIMULATE_HUMAN'});
   });
   
   // 监听来自background script的消息
@@ -215,14 +215,12 @@ ${combinedText}`;
         updateStatus('Crawling completed');
         isCrawling = false;
         startButton.disabled = false;
-        stopButton.disabled = true;
         break;
         
       case 'CRAWLING_STOPPED':
         updateStatus('Crawling stopped');
         isCrawling = false;
         startButton.disabled = false;
-        stopButton.disabled = true;
         break;
         
       case 'LOG_MESSAGE':
