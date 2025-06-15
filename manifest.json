@@ -1,17 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "Crawler AI Chrome Extension",
+  "name": "Twitter Crawler",
   "version": "1.0",
-  "description": "A Chrome extension for web crawling with AI capabilities",
+  "description": "A Twitter crawler extension",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
-    "tabs",
     "downloads"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://twitter.com/*",
+    "https://x.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -22,12 +22,13 @@
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": ["https://twitter.com/*", "https://x.com/*"],
+      "js": ["db.js", "content.js"]
     }
   ],
   "icons": {

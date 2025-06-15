@@ -3,9 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const stopButton = document.getElementById('stopButton');
   const statusDiv = document.getElementById('status');
   const logDiv = document.getElementById('log');
-  const jsonData = document.getElementById('jsonData');
   const promptData = document.getElementById('promptData');
-  const copyButton = document.getElementById('copyButton');
   const copyPromptButton = document.getElementById('copyPromptButton');
   const generatePromptButton = document.getElementById('generatePromptButton');
   const currentProgress = document.getElementById('currentProgress');
@@ -18,6 +16,21 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentData = null;
   let totalUrls = 0;
   let currentUrlIndex = 0;
+  
+  // 从IndexedDB获取数据
+  async function getDataFromIndexedDB() {
+    try {
+      if (!window.dbManager) {
+        throw new Error('Database not initialized');
+      }
+      const results = await window.dbManager.getAllResults();
+      currentData = results;
+      return results;
+    } catch (error) {
+      updateStatus(`Error getting data from IndexedDB: ${error.message}`, true);
+      return null;
+    }
+  }
   
   // 更新进度显示
   function updateProgress(current, total) {
@@ -45,20 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     statusDiv.textContent = message;
     statusDiv.style.color = isError ? '#dc3545' : '#495057';
-  }
-  
-  // 显示JSON数据
-  function showJsonData(data) {
-    try {
-      currentData = data;
-      const jsonString = JSON.stringify(data, null, 2);
-      jsonData.value = jsonString;
-      jsonData.style.display = 'block';
-      copyButton.style.display = 'block';
-      generatePromptButton.style.display = 'block';
-    } catch (error) {
-      updateStatus(`Error formatting JSON: ${error.message}`, true);
-    }
   }
   
   // 生成Prompt
@@ -106,13 +105,6 @@ ${combinedText}`;
     }
   }
   
-  // 复制JSON数据
-  copyButton.addEventListener('click', function() {
-    jsonData.select();
-    document.execCommand('copy');
-    updateStatus('JSON data copied to clipboard');
-  });
-  
   // 复制Prompt数据
   copyPromptButton.addEventListener('click', function() {
     promptData.select();
@@ -121,11 +113,16 @@ ${combinedText}`;
   });
   
   // 生成Prompt
-  generatePromptButton.addEventListener('click', function() {
-    if (currentData) {
-      generatePrompt(currentData);
+  generatePromptButton.addEventListener('click', async function() {
+    if (!currentData) {
+      const data = await getDataFromIndexedDB();
+      if (data) {
+        generatePrompt(data);
+      } else {
+        updateStatus('No data available to generate prompt', true);
+      }
     } else {
-      updateStatus('No data available to generate prompt', true);
+      generatePrompt(currentData);
     }
   });
   
@@ -170,12 +167,9 @@ ${combinedText}`;
     stopButton.disabled = false;
     updateStatus('Starting crawling...');
     
-    // 隐藏JSON数据和Prompt
-    jsonData.style.display = 'none';
+    // 隐藏Prompt
     promptData.style.display = 'none';
-    copyButton.style.display = 'none';
     copyPromptButton.style.display = 'none';
-    generatePromptButton.style.display = 'none';
     currentData = null;
     
     // 重置进度
@@ -210,7 +204,7 @@ ${combinedText}`;
         
       case 'CRAWLING_DATA':
         updateStatus(`Received ${message.data.length} tweets`);
-        showJsonData(message.data);
+        currentData = message.data;
         break;
         
       case 'CRAWLING_ERROR':

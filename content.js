@@ -3,137 +3,88 @@ let crawlingResults = [];
 let currentUrlIndex = 0;
 let isCrawling = false;
 
-// 要爬取的URL列表
+// 核心要爬取的URL列表
 const TWITTER_URLS = [
-    "https://x.com/sama",
-    "https://x.com/github",
-    "https://x.com/gui_penedo",
-    "https://x.com/01Ai_Yi",
-    "https://x.com/gneubig",
-    "https://x.com/AssemblyAI",
-    "https://x.com/perplexity_ai",
-
-    "https://x.com/ollama",
-    "https://x.com/IterIntellectus",
-    "https://x.com/seti_park",
-    "https://x.com/FireworksAi_HQ",
-    "https://x.com/NVIDIAAIDev",
-    "https://x.com/sundarpichai",
-    "https://x.com/wunderwuzzi23",
-
-    "https://x.com/cognition_labs",
-    "https://x.com/sunjiao123sun_",
-    "https://x.com/peteratmsr",
-    "https://x.com/GaryMarcus",
-    "https://x.com/runwayml",
+    // AI/ML 研究机构与公司
     "https://x.com/OpenAI",
-
+    "https://x.com/GoogleAI",
+    "https://x.com/huggingface",
+    "https://x.com/NVIDIAAIDev",
     "https://x.com/AIatMeta",
-    "https://x.com/windsurf_ai",
-    "https://x.com/StanfordHAI",
-    "https://x.com/omarsar0",
-    "https://x.com/AISafetyMemes",
-    "https://x.com/MSFTResearch",
+    "https://x.com/AnthropicAI",  // Claude的创建者
+    "https://x.com/DeepMind",     // DeepMind官方
 
-    "https://x.com/xenovacom",
-    "https://x.com/tydsh",
-    "https://x.com/NeurIPsConf",
-    "https://x.com/SiliconFlowAI",
-    "https://x.com/intern_lm",
-    "https://x.com/alexrives",
-    "https://x.com/deepseek_ai",
-
-    "https://x.com/DrJimFan",
-    "https://x.com/Scobleizer",
+    // AI/ML 领域重要人物
+    "https://x.com/sama",
     "https://x.com/AndrewYNg",
+    "https://x.com/GaryMarcus",
+    "https://x.com/DrJimFan",
+    "https://x.com/fchollet",
+    "https://x.com/ylecun",       // Yann LeCun
+    "https://x.com/geoffreyhinton", // Geoffrey Hinton
+    "https://x.com/ylecun",       // Yann LeCun
+
+    // 创新AI公司
+    "https://x.com/perplexity_ai",
+    "https://x.com/runwayml",
+    "https://x.com/midjourney",
+    "https://x.com/pika_labs",
+    "https://x.com/ideogram_ai",
+    "https://x.com/StabilityAI",  // Stable Diffusion
+    "https://x.com/CharacterAI",  // Character.AI
+
+    // AI基础设施与工具
+    "https://x.com/LangChainAi",
+    "https://x.com/ollama",
+    "https://x.com/CerebrasSystems",
+    "https://x.com/Waymo",
+    "https://x.com/Replicate",    // AI模型部署平台
+    "https://x.com/CohereAI",     // 语言模型API
+
+    // AI安全与伦理
+    "https://x.com/StanfordHAI",
+    "https://x.com/AISafetyMemes",
+    // "https://x.com/AlignmentForum" // AI对齐论坛
+]
+
+// 额外的优质账号（按需使用）
+const ADDITIONAL_TWITTER_URLS = [
+    // AI研究社区
+    "https://x.com/NeurIPsConf",      // NeurIPS会议
+    "https://x.com/ICMLconf",         // ICML会议
+    "https://x.com/ICLRconf",         // ICLR会议
+    // "https://x.com/ACL_Conference",   // ACL会议
+
+    // AI创业公司
+    "https://x.com/AssemblyAI",
+    "https://x.com/FireworksAi_HQ",
+    "https://x.com/cognition_labs",
     "https://x.com/SakanaAILabs",
     "https://x.com/LumaLabsAI",
 
-    "https://x.com/Alibaba_Qwen",
-    "https://x.com/mikeknoop",
-    "https://x.com/gdb",
-    "https://x.com/GoogleAI",
+    // AI工具与平台
     "https://x.com/OpenAINewsroom",
     "https://x.com/OpenBMB",
+    "https://x.com/NVIDIARobotics",
+    "https://x.com/UnitreeRobotics",
+    "https://x.com/GoogleCloudTech",
 
-    "https://x.com/nvidia",
-    "https://x.com/satyanadella",
-    "https://x.com/LangChainAi",
-    "https://x.com/garrytan",
-    "https://x.com/behrouz_ali",
-
-    "https://x.com/kyutai_labs",
-    "https://x.com/spacex",
-    "https://x.com/rainisto",
-    "https://x.com/unusual_whales",
-    "https://x.com/patrickc",
-    "https://x.com/linoy_tsaban",
-    "https://x.com/itsPaulAi",
-
-    "https://x.com/ProfTomYeh",
-    "https://x.com/JacquesThibs",
-    "https://x.com/alexalbert__",
-    "https://x.com/douwekiela",
-    "https://x.com/AlecRad",
-    "https://x.com/dnystedt",
-    "https://x.com/Haojun_Zhao14",
-    
-    "https://x.com/Teslaconomics",
-    "https://x.com/Koven_Yu",
-    "https://x.com/code",
-    "https://x.com/ClementDelangue",
-    "https://x.com/morteymike",
+    // AI研究者与工程师
     "https://x.com/_jasonwei",
     "https://x.com/sriramk",
     "https://x.com/sainingxie",
-
-    "https://x.com/hume_ai",
     "https://x.com/_philschmid",
-    "https://x.com/TIIuae",
-    "https://x.com/midjourney",
-    "https://x.com/NVIDIARobotics",
-    "https://x.com/OpenAiDevs",
-
-    "https://x.com/TONGYI_SpeechAI",
-    "https://x.com/ideogram_ai",
-    "https://x.com/UnitreeRobotics",
-    "https://x.com/juberti",
-    "https://x.com/CerebrasSystems",
-    "https://x.com/kimmonismus",
-    "https://x.com/rohanpaul_ai",
-    "https://x.com/pika_labs",
-    "https://x.com/stevenbjohnson",
-    "https://x.com/GoogleCloudTech",
-
-    "https://x.com/minchoi",
-    "https://x.com/julien_c",
-    "https://x.com/mervenoyann",
-    "https://x.com/_nateraw",
-    "https://x.com/huggingface",
-    "https://x.com/tunguz",
     "https://x.com/rasbt",
     "https://x.com/osanseviero",
-    "https://x.com/fchollet",
     "https://x.com/mishig25",
-    "https://x.com/abhi1thakur",
-    "https://x.com/victormustar",
-    "https://x.com/Waymo",
-    "https://x.com/cursor_ai", 
+
+    // AI教育与资源
     "https://x.com/dair_ai",
     "https://x.com/IFLScience",
     "https://x.com/sciam",
-    "https://x.com/jed_yang",
-    "https://x.com/freddy_alfonso_",
     "https://x.com/emollick",
-    "https://x.com/billyuchenlin",
-    "https://x.com/vitrupo",
-    "https://x.com/EdwardSun0909",
-    "https://x.com/Guodaya",
-    "https://x.com/ajassy",
-    "https://x.com/chetanp",
-
-    "https://x.com/XDevelopers",
-]   
+    "https://x.com/billyuchenlin"
+]
 
 // 从storage中恢复状态
 chrome.storage.local.get(['isCrawling', 'currentUrlIndex'], function(result) {
@@ -166,9 +117,29 @@ function randomDelay(min, max) {
     return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+// 模拟人类行为
+async function simulateHumanBehavior() {
+    // 随机滚动
+    const scrollAmount = Math.floor(Math.random() * 300) + 100;
+    window.scrollBy(0, scrollAmount);
+    await randomDelay(500, 1500);
+    
+    // 随机鼠标移动
+    const event = new MouseEvent('mousemove', {
+        bubbles: true,
+        cancelable: true,
+        clientX: Math.random() * window.innerWidth,
+        clientY: Math.random() * window.innerHeight
+    });
+    document.dispatchEvent(event);
+    
+    await randomDelay(1000, 2000);
+}
+
 // 获取用户信息
 async function getUserInfo() {
     try {
+        await simulateHumanBehavior();
         const username = window.location.pathname.split('/')[1];
         const nameElement = document.querySelector('[data-testid="UserName"]');
         const name = nameElement ? nameElement.textContent.trim() : '';
@@ -184,6 +155,7 @@ async function getUserInfo() {
 // 获取推文数据
 async function getTweetData(tweetElement) {
     try {
+        await simulateHumanBehavior();
         console.log('[Crawler] Attempting to extract tweet data...');
         
         const tweetText = tweetElement.querySelector('[data-testid="tweetText"]')?.textContent || '';
@@ -231,7 +203,7 @@ async function crawlCurrentPage() {
         // 等待页面加载
         console.log('[Crawler] Waiting for page to load...');
         await randomDelay(2000, 4000);
-        console.log('[Crawler] Page load delay completed');
+        await simulateHumanBehavior();
         
         // 获取用户信息
         console.log('[Crawler] Attempting to get user info...');
@@ -264,6 +236,7 @@ async function crawlCurrentPage() {
             console.log('[Crawler] Attempting to scroll page...');
             window.scrollTo(0, document.body.scrollHeight);
             await randomDelay(2000, 3000);
+            await simulateHumanBehavior();
             
             const newTweetElements = document.querySelectorAll('[data-testid="tweet"]');
             console.log(`[Crawler] After scroll: found ${newTweetElements.length} tweets`);
@@ -289,6 +262,16 @@ async function crawlCurrentPage() {
                 });
                 console.log(`[Crawler] Successfully processed tweet: ${tweetData.url}`);
                 processedCount++;
+                
+                // 保存到IndexedDB
+                try {
+                    await window.dbManager.saveResults([{
+                        ...userInfo,
+                        ...tweetData
+                    }]);
+                } catch (error) {
+                    console.error('[Crawler] Error saving to IndexedDB:', error);
+                }
             } catch (error) {
                 console.error('[Crawler] Error processing tweet:', error);
             }

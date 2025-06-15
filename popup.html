@@ -173,18 +173,12 @@
     <div id="log"></div>
     
     <div class="data-container">
-        <h3>Raw JSON Data:</h3>
-        <textarea id="jsonData" readonly></textarea>
-        <button id="copyButton" class="copy-button" style="display: none;">Copy JSON</button>
-    </div>
-    
-    <div class="data-container">
         <h3>Generated Prompt:</h3>
         <textarea id="promptData" readonly></textarea>
         <button id="copyPromptButton" class="copy-button" style="display: none;">Copy Prompt</button>
-        <button id="generatePromptButton" class="prompt-button" style="display: none;">Generate Prompt</button>
+        <button id="generatePromptButton" class="prompt-button">Generate Prompt</button>
     </div>
-    
+    <script src="db.js"></script>
     <script src="popup.js"></script>
 </body>
 </html> 
