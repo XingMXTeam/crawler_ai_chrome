@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const currentProgress = document.getElementById('currentProgress');
   const progressPercentage = document.getElementById('progressPercentage');
   const progressFill = document.getElementById('progressFill');
+  const clearCacheButton = document.getElementById('clearCacheButton');
   
   let isCrawling = false;
   let retryCount = 0;
@@ -16,6 +17,33 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentData = null;
   let totalUrls = 0;
   let currentUrlIndex = 0;
+  
+  // 清理 IndexedDB
+  async function clearIndexedDB() {
+    try {
+      const databases = await window.indexedDB.databases();
+      for (const db of databases) {
+        if (db.name) {
+          await window.indexedDB.deleteDatabase(db.name);
+        }
+      }
+      updateStatus('缓存清理成功');
+    } catch (error) {
+      updateStatus(`清理缓存失败: ${error.message}`, true);
+    }
+  }
+
+  // 清除缓存按钮点击事件
+  clearCacheButton.addEventListener('click', async function() {
+    if (isCrawling) {
+      updateStatus('爬取过程中无法清理缓存', true);
+      return;
+    }
+    
+    if (confirm('确定要清理所有缓存数据吗？此操作不可恢复。')) {
+      await clearIndexedDB();
+    }
+  });
   
   // 从content script获取数据
   async function getDataFromContentScript() {
@@ -75,14 +103,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // 生成Prompt
   async function generatePrompt(data) {
     try {
-      // 如果数据为空，从content script获取
+      // 总是从content script获取最新数据
+      data = await getDataFromContentScript();
       if (!data || data.length === 0) {
-        data = await getDataFromContentScript();
-        if (!data || data.length === 0) {
-          updateStatus('No data available to generate prompt', true);
-          return;
-        }
+        updateStatus('No data available to generate prompt', true);
+        return;
       }
+
+      // 更新currentData
+      currentData = data;
 
       // 处理推文数据
       const tweets = data.map(tweet => ({
@@ -107,6 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
    - 主语必须是人或机构组织（如果是人要带上身份/职位）
    - 使用简单易懂的中文，避免专业术语
    - 纯文本输出，不要使用markdown格式
+   - 在总结中保留关键原文引用，使用引号标注，并注明来源推文地址
 
 2. 信息来源要求：
    - 优先使用推文中的直接信息
@@ -114,6 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
    - 对于推测性内容，必须明确标注"推测"或"可能"
    - 对于有争议的内容，需要标注不同观点及其来源
    - 所有引用的外部信息必须是可公开访问的网络资料
+   - 每个重要观点或信息都要标注来源推文链接，方便追溯原文
 
 ${combinedText}`;
 
@@ -191,7 +222,7 @@ ${combinedText}`;
   });
   
   // 停止爬取
-  stopButton.addEventListener('click', function() {
+  stopButton.addEventListener('click', async function() {
     if (!isCrawling) return;
     
     isCrawling = false;
@@ -199,8 +230,23 @@ ${combinedText}`;
     updateStatus('Stopping crawling...');
     
     // 发送停止爬取和停止模拟人类行为的消息
-    sendMessageToContentScript({type: 'STOP_CRAWLING'});
-    sendMessageToContentScript({type: 'STOP_SIMULATE_HUMAN'});
+    try {
+      await sendMessageToContentScript({type: 'STOP_CRAWLING'});
+      await sendMessageToContentScript({type: 'STOP_SIMULATE_HUMAN'});
+      
+      // 重置状态
+      currentData = null;
+      currentUrlIndex = 0;
+      updateProgress(0, 0);
+      
+      // 隐藏Prompt
+      promptData.style.display = 'none';
+      copyPromptButton.style.display = 'none';
+      
+      updateStatus('Crawling stopped successfully');
+    } catch (error) {
+      updateStatus(`Error stopping crawling: ${error.message}`, true);
+    }
   });
   
   // 监听来自background script的消息

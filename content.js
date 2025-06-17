@@ -47,84 +47,134 @@ console.error = function(...args) {
 
 // 核心要爬取的URL列表
 const TWITTER_URLS = [
-    // AI/ML 研究机构与公司
-    // "https://x.com/OpenAI",
-    // "https://x.com/GoogleAI",
-    // "https://x.com/huggingface",
-    // "https://x.com/NVIDIAAIDev",
-    // "https://x.com/AIatMeta",
-    // "https://x.com/AnthropicAI",  // Claude的创建者
-    // "https://x.com/DeepMind",     // DeepMind官方
+    // "https://x.com/sama",
+    // "https://x.com/github",
+    // "https://x.com/gui_penedo",
+    // "https://x.com/01Ai_Yi",
+    // "https://x.com/gneubig",
+    // "https://x.com/AssemblyAI",
+    // "https://x.com/perplexity_ai",
 
-    // // AI/ML 领域重要人物
-    "https://x.com/sama",
-    "https://x.com/AndrewYNg",
-    "https://x.com/GaryMarcus",
-    "https://x.com/DrJimFan",
-    "https://x.com/fchollet",
-    "https://x.com/ylecun",       // Yann LeCun
-    "https://x.com/geoffreyhinton", // Geoffrey Hinton
-    "https://x.com/ylecun",       // Yann LeCun
-
-    // // 创新AI公司
-    "https://x.com/perplexity_ai",
-    "https://x.com/runwayml",
-    "https://x.com/midjourney",
-    "https://x.com/pika_labs",
-    "https://x.com/ideogram_ai",
-    "https://x.com/StabilityAI",  // Stable Diffusion
-    "https://x.com/CharacterAI",  // Character.AI
-
-    // // AI基础设施与工具
-    // "https://x.com/LangChainAi",
     // "https://x.com/ollama",
-    // "https://x.com/CerebrasSystems",
-    // "https://x.com/Waymo",
-    // "https://x.com/Replicate",    // AI模型部署平台
-    // "https://x.com/CohereAI",     // 语言模型API
+    // "https://x.com/IterIntellectus",
+    // "https://x.com/seti_park",
+    // "https://x.com/FireworksAi_HQ",
+    // "https://x.com/NVIDIAAIDev",
+    // "https://x.com/sundarpichai",
+    // "https://x.com/wunderwuzzi23",
 
-    // // AI安全与伦理
-    // "https://x.com/StanfordHAI",
-    // "https://x.com/AISafetyMemes",
-]
+    // "https://x.com/cognition_labs",
+    // "https://x.com/sunjiao123sun_",
+    // "https://x.com/peteratmsr",
+    // "https://x.com/GaryMarcus",
+    // "https://x.com/runwayml",
+    // "https://x.com/OpenAI",
 
-// 额外的优质账号（按需使用）
-const ADDITIONAL_TWITTER_URLS = [
-    // AI研究社区
-    "https://x.com/NeurIPsConf",      // NeurIPS会议
-    "https://x.com/ICMLconf",         // ICML会议
-    "https://x.com/ICLRconf",         // ICLR会议
-    // "https://x.com/ACL_Conference",   // ACL会议
+    // "https://x.com/AIatMeta",
+    // "https://x.com/windsurf_ai",
+    "https://x.com/StanfordHAI",
+    "https://x.com/omarsar0",
+    "https://x.com/AISafetyMemes",
+    "https://x.com/MSFTResearch",
 
-    // AI创业公司
-    "https://x.com/AssemblyAI",
-    "https://x.com/FireworksAi_HQ",
-    "https://x.com/cognition_labs",
+    "https://x.com/xenovacom",
+    "https://x.com/tydsh",
+    "https://x.com/NeurIPsConf",
+    "https://x.com/SiliconFlowAI",
+    "https://x.com/intern_lm",
+    "https://x.com/alexrives",
+    "https://x.com/deepseek_ai",
+
+    "https://x.com/DrJimFan",
+    "https://x.com/Scobleizer",
+    "https://x.com/AndrewYNg",
     "https://x.com/SakanaAILabs",
     "https://x.com/LumaLabsAI",
 
-    // AI工具与平台
+    "https://x.com/Alibaba_Qwen",
+    "https://x.com/mikeknoop",
+    "https://x.com/gdb",
+    "https://x.com/GoogleAI",
     "https://x.com/OpenAINewsroom",
     "https://x.com/OpenBMB",
-    "https://x.com/NVIDIARobotics",
-    "https://x.com/UnitreeRobotics",
-    "https://x.com/GoogleCloudTech",
 
-    // AI研究者与工程师
+    "https://x.com/nvidia",
+    "https://x.com/satyanadella",
+    "https://x.com/LangChainAi",
+    "https://x.com/garrytan",
+    "https://x.com/behrouz_ali",
+
+    "https://x.com/kyutai_labs",
+    "https://x.com/spacex",
+    "https://x.com/rainisto",
+    "https://x.com/unusual_whales",
+    "https://x.com/patrickc",
+    "https://x.com/linoy_tsaban",
+    "https://x.com/itsPaulAi",
+
+    "https://x.com/ProfTomYeh",
+    "https://x.com/JacquesThibs",
+    "https://x.com/alexalbert__",
+    "https://x.com/douwekiela",
+    "https://x.com/AlecRad",
+    "https://x.com/dnystedt",
+    "https://x.com/Haojun_Zhao14",
+    
+    "https://x.com/Teslaconomics",
+    "https://x.com/Koven_Yu",
+    "https://x.com/code",
+    "https://x.com/ClementDelangue",
+    "https://x.com/morteymike",
     "https://x.com/_jasonwei",
     "https://x.com/sriramk",
     "https://x.com/sainingxie",
+
+    "https://x.com/hume_ai",
     "https://x.com/_philschmid",
+    "https://x.com/TIIuae",
+    "https://x.com/midjourney",
+    "https://x.com/NVIDIARobotics",
+    "https://x.com/OpenAiDevs",
+
+    "https://x.com/TONGYI_SpeechAI",
+    "https://x.com/ideogram_ai",
+    "https://x.com/UnitreeRobotics",
+    "https://x.com/juberti",
+    "https://x.com/CerebrasSystems",
+    "https://x.com/kimmonismus",
+    "https://x.com/rohanpaul_ai",
+    "https://x.com/pika_labs",
+    "https://x.com/stevenbjohnson",
+    "https://x.com/GoogleCloudTech",
+
+    "https://x.com/minchoi",
+    "https://x.com/julien_c",
+    "https://x.com/mervenoyann",
+    "https://x.com/_nateraw",
+    "https://x.com/huggingface",
+    "https://x.com/tunguz",
     "https://x.com/rasbt",
     "https://x.com/osanseviero",
+    "https://x.com/fchollet",
     "https://x.com/mishig25",
-
-    // AI教育与资源
+    "https://x.com/abhi1thakur",
+    "https://x.com/victormustar",
+    "https://x.com/Waymo",
+    "https://x.com/cursor_ai", 
     "https://x.com/dair_ai",
     "https://x.com/IFLScience",
     "https://x.com/sciam",
+    "https://x.com/jed_yang",
+    "https://x.com/freddy_alfonso_",
     "https://x.com/emollick",
-    "https://x.com/billyuchenlin"
+    "https://x.com/billyuchenlin",
+    "https://x.com/vitrupo",
+    "https://x.com/EdwardSun0909",
+    "https://x.com/Guodaya",
+    "https://x.com/ajassy",
+    "https://x.com/chetanp",
+
+    "https://x.com/XDevelopers",
 ]
 
 // 从storage中恢复状态
@@ -349,11 +399,18 @@ async function crawlCurrentPage() {
                 processedCount++;
                 
                 // 保存到IndexedDB
+                console.log('[Crawler] Saving data to IndexedDB:', {
+                    userInfo,
+                    tweetData,
+                    timestamp: new Date().toISOString()
+                });
                 try {
                     await window.dbManager.saveResults([{
                         ...userInfo,
                         ...tweetData
                     }]);
+                    // 添加一个确认机制
+                    await window.dbManager.verifyDataSaved();
                 } catch (error) {
                     console.error('[Crawler] Error saving to IndexedDB:', error);
                 }
@@ -472,21 +529,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }, 100);
     } else if (message.type === 'STOP_CRAWLING') {
         console.log('[Crawler] Received stop crawling command');
-        // 先停止模拟人类行为
+        
+        // 立即停止所有活动
         shouldSimulateHuman = false;
         isCrawling = false;
-        saveState();
+        
+        // 清除所有定时器
+        const highestTimeoutId = setTimeout(() => {}, 0);
+        for (let i = 0; i < highestTimeoutId; i++) {
+            clearTimeout(i);
+        }
+        
+        // 重置状态
+        resetState();
         
         // 确保状态被保存
         chrome.storage.local.set({
             shouldSimulateHuman: false,
-            isCrawling: false
+            isCrawling: false,
+            currentUrlIndex: 0
         }, function() {
             console.log('[Crawler] States saved after stop:', { shouldSimulateHuman, isCrawling });
         });
-        
-        // 然后重置其他状态
-        resetState();
         
         // 发送停止消息
         chrome.runtime.sendMessage({ type: 'CRAWLING_STOPPED' }, function(response) {
@@ -494,6 +558,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.error('[Crawler] Error sending stopped message:', chrome.runtime.lastError);
             }
         });
+        
+        // 停止页面滚动
+        window.scrollTo(0, 0);
         
         sendResponse({ status: 'stopped' });
     } else if (message.type === 'STOP_SIMULATE_HUMAN') {
@@ -503,8 +570,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ status: 'simulate_human_stopped' });
     } else if (message.type === 'GET_DATA') {
         console.log('[Crawler] Received get data request');
-        // 从window.dbManager获取数据
-        window.dbManager.getAllResults()
+        
+        const getDataWithRetry = async (retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const data = await window.dbManager.getAllResults();
+                    if (data && data.length > 0) {
+                        console.log('[Crawler] Getting data from IndexedDB:', {
+                            timestamp: new Date().toISOString(),
+                            dataLength: data.length
+                        });
+                        return data;
+                    }
+                    // 如果数据为空，等待一段时间后重试
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (error) {
+                    console.error(`[Crawler] Retry ${i + 1} failed:`, error);
+                    if (i === retries - 1) throw error;
+                }
+            }
+            return [];
+        };
+
+        getDataWithRetry()
             .then(data => {
                 console.log('[Crawler] Sending data to popup:', data);
                 sendResponse({ data });
@@ -513,7 +601,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.error('[Crawler] Error getting data:', error);
                 sendResponse({ error: error.message });
             });
-        return true;  // 保持消息通道开放以进行异步响应
+        
+        return true;
     }
     
     // 返回true表示会异步发送响应
@@ -581,4 +670,55 @@ window.addEventListener('load', async () => {
             console.log('[Crawler] Not crawling, isCrawling is false');
         }
     });
+});
+
+// 在 dbManager 初始化时
+window.dbManager = {
+    isReady: false,
+    init: async function() {
+        if (this.isReady) return;
+        try {
+            await initDB();  // 使用 db.js 中的 initDB
+            this.isReady = true;
+            console.log('[DB] Database initialized successfully');
+        } catch (error) {
+            console.error('[DB] Failed to initialize database:', error);
+            throw error;
+        }
+    },
+    saveResults: async function(results) {
+        if (!this.isReady) {
+            await this.init();
+        }
+        return saveResults(results);  // 使用 db.js 中的 saveResults
+    },
+    getAllResults: async function() {
+        if (!this.isReady) {
+            await this.init();
+        }
+        return getAllResults();  // 使用 db.js 中的 getAllResults
+    },
+    verifyDataSaved: async function() {
+        if (!this.isReady) {
+            await this.init();
+        }
+        const results = await getAllResults();
+        return results.length > 0;
+    },
+    clearAll: async function() {
+        if (!this.isReady) {
+            await this.init();
+        }
+        return clearResults();  // 使用 db.js 中的 clearResults
+    }
+};
+
+// 在页面加载时初始化数据库
+window.addEventListener('load', async () => {
+    try {
+        await window.dbManager.init();
+        console.log('[DB] Database initialized successfully');
+    } catch (error) {
+        console.error('[DB] Failed to initialize database:', error);
+    }
 });
