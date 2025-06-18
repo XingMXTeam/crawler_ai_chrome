@@ -6,6 +6,11 @@ let shouldSimulateHuman = false;  // 默认关闭模拟人类行为
 
 // 转发日志到popup
 function forwardLog(message, isError = false) {
+    // 只有在爬取状态时才转发日志
+    if (!isCrawling && !shouldSimulateHuman) {
+        return;
+    }
+    
     chrome.runtime.sendMessage({
         type: 'LOG_MESSAGE',
         message: message,
@@ -252,12 +257,15 @@ function randomDelay(min, max) {
 
 // 模拟人类行为
 async function simulateHumanBehavior() {
-    if (!shouldSimulateHuman) return;  // 如果不需要模拟人类行为，直接返回
+    if (!shouldSimulateHuman || !isCrawling) return;  // 如果不需要模拟人类行为或已停止，直接返回
     
     // 随机滚动
     const scrollAmount = Math.floor(Math.random() * 300) + 100;
     window.scrollBy(0, scrollAmount);
     await randomDelay(500, 1500);
+    
+    // 再次检查状态
+    if (!shouldSimulateHuman || !isCrawling) return;
     
     // 随机鼠标移动
     const event = new MouseEvent('mousemove', {
@@ -333,11 +341,24 @@ async function getTweetData(tweetElement) {
 // 爬取当前页面的推文
 async function crawlCurrentPage() {
     try {
+        // 检查是否应该继续爬取
+        if (!isCrawling) {
+            console.log('[Crawler] Crawling stopped, exiting crawlCurrentPage');
+            return false;
+        }
+        
         console.log(`[Crawler] Starting to crawl page: ${window.location.href}`);
         
         // 等待页面加载
         console.log('[Crawler] Waiting for page to load...');
         await randomDelay(2000, 4000);
+        
+        // 再次检查状态
+        if (!isCrawling) {
+            console.log('[Crawler] Crawling stopped during page load wait');
+            return false;
+        }
+        
         await simulateHumanBehavior();
         
         // 获取用户信息
@@ -371,6 +392,13 @@ async function crawlCurrentPage() {
             console.log('[Crawler] Attempting to scroll page...');
             window.scrollTo(0, document.body.scrollHeight);
             await randomDelay(2000, 3000);
+            
+            // 检查状态
+            if (!isCrawling) {
+                console.log('[Crawler] Crawling stopped during scroll wait');
+                return false;
+            }
+            
             await simulateHumanBehavior();
             
             const newTweetElements = document.querySelectorAll('[data-testid="tweet"]');
@@ -388,6 +416,12 @@ async function crawlCurrentPage() {
         const pageResults = [];
         
         for (const tweetElement of tweetElements) {
+            // 检查是否应该继续处理
+            if (!isCrawling) {
+                console.log('[Crawler] Crawling stopped during tweet processing');
+                break;
+            }
+            
             try {
                 console.log(`[Crawler] Processing tweet ${processedCount + 1}/${tweetElements.length}`);
                 const tweetData = await getTweetData(tweetElement);
@@ -473,6 +507,10 @@ function resetState() {
     shouldSimulateHuman = false;
     crawlingResults = [];
     
+    // 恢复原始的console函数，停止日志转发
+    console.log = originalConsoleLog;
+    console.error = originalConsoleError;
+    
     // 重置 localStorage 中的状态
     chrome.storage.local.remove(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'crawlingResults'], function() {
         console.log('[Crawler] All states cleared from storage');
@@ -534,6 +572,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         shouldSimulateHuman = false;
         isCrawling = false;
         
+        // 恢复原始的console函数，停止日志转发
+        console.log = originalConsoleLog;
+        console.error = originalConsoleError;
+        
         // 清除所有定时器
         const highestTimeoutId = setTimeout(() => {}, 0);
         for (let i = 0; i < highestTimeoutId; i++) {
@@ -566,6 +608,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (message.type === 'STOP_SIMULATE_HUMAN') {
         console.log('[Crawler] Received stop simulate human command');
         shouldSimulateHuman = false;  // 停止模拟人类行为
+        
+        // 如果完全停止，也恢复console函数
+        if (!isCrawling) {
+            console.log = originalConsoleLog;
+            console.error = originalConsoleError;
+        }
+        
         saveState();  // 保存状态
         sendResponse({ status: 'simulate_human_stopped' });
     } else if (message.type === 'GET_DATA') {

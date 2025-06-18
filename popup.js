@@ -223,8 +223,6 @@ ${combinedText}`;
   
   // 停止爬取
   stopButton.addEventListener('click', async function() {
-    if (!isCrawling) return;
-    
     isCrawling = false;
     startButton.disabled = false;
     updateStatus('Stopping crawling...');
