@@ -52,31 +52,31 @@ console.error = function(...args) {
 
 // 核心要爬取的URL列表
 const TWITTER_URLS = [
-    // "https://x.com/sama",
-    // "https://x.com/github",
-    // "https://x.com/gui_penedo",
-    // "https://x.com/01Ai_Yi",
-    // "https://x.com/gneubig",
-    // "https://x.com/AssemblyAI",
-    // "https://x.com/perplexity_ai",
+    "https://x.com/sama",
+    "https://x.com/github",
+    "https://x.com/gui_penedo",
+    "https://x.com/01Ai_Yi",
+    "https://x.com/gneubig",
+    "https://x.com/AssemblyAI",
+    "https://x.com/perplexity_ai",
 
-    // "https://x.com/ollama",
-    // "https://x.com/IterIntellectus",
-    // "https://x.com/seti_park",
-    // "https://x.com/FireworksAi_HQ",
-    // "https://x.com/NVIDIAAIDev",
-    // "https://x.com/sundarpichai",
-    // "https://x.com/wunderwuzzi23",
+    "https://x.com/ollama",
+    "https://x.com/IterIntellectus",
+    "https://x.com/seti_park",
+    "https://x.com/FireworksAi_HQ",
+    "https://x.com/NVIDIAAIDev",
+    "https://x.com/sundarpichai",
+    "https://x.com/wunderwuzzi23",
 
-    // "https://x.com/cognition_labs",
-    // "https://x.com/sunjiao123sun_",
-    // "https://x.com/peteratmsr",
-    // "https://x.com/GaryMarcus",
-    // "https://x.com/runwayml",
-    // "https://x.com/OpenAI",
+    "https://x.com/cognition_labs",
+    "https://x.com/sunjiao123sun_",
+    "https://x.com/peteratmsr",
+    "https://x.com/GaryMarcus",
+    "https://x.com/runwayml",
+    "https://x.com/OpenAI",
 
-    // "https://x.com/AIatMeta",
-    // "https://x.com/windsurf_ai",
+    "https://x.com/AIatMeta",
+    "https://x.com/windsurf_ai",
     "https://x.com/StanfordHAI",
     "https://x.com/omarsar0",
     "https://x.com/AISafetyMemes",
@@ -262,7 +262,7 @@ async function simulateHumanBehavior() {
     // 随机滚动
     const scrollAmount = Math.floor(Math.random() * 300) + 100;
     window.scrollBy(0, scrollAmount);
-    await randomDelay(500, 1500);
+    await randomDelay(50, 100);
     
     // 再次检查状态
     if (!shouldSimulateHuman || !isCrawling) return;
@@ -276,7 +276,7 @@ async function simulateHumanBehavior() {
     });
     document.dispatchEvent(event);
     
-    await randomDelay(1000, 2000);
+    await randomDelay(50, 100);
 }
 
 // 获取用户信息

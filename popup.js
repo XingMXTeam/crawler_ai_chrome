@@ -113,40 +113,45 @@ document.addEventListener('DOMContentLoaded', function() {
       // 更新currentData
       currentData = data;
 
-      // 处理推文数据
-      const tweets = data.map(tweet => ({
-        text: tweet.text,
-        url: tweet.url || '无链接',
-        metrics: {
-          retweet: tweet.retweets || 0,
-          reply: tweet.replies || 0,
-          like: tweet.likes || 0
+      // 按URL分组数据
+      const groupedData = {};
+      data.forEach(tweet => {
+        const url = tweet.url || '无链接';
+        if (!groupedData[url]) {
+          groupedData[url] = [];
         }
-      }));
+        groupedData[url].push({
+          text: tweet.text,
+          metrics: {
+            retweet: tweet.retweets || 0,
+            reply: tweet.replies || 0,
+            like: tweet.likes || 0
+          }
+        });
+      });
 
-      // 生成提示文本
-      const combinedText = tweets.map((text, i) => 
-        `推文 ${i+1}:\n${text.text}\n来源: ${text.url}`
-      ).join('\n\n');
+      // 生成结构化的提示文本
+      let structuredContent = '';
+      Object.keys(groupedData).forEach((url, urlIndex) => {
+        const tweets = groupedData[url];
+        structuredContent += `=== 数据源 ${urlIndex + 1} ===\n`;
+        structuredContent += `来源URL: ${url}\n`;
+        structuredContent += `推文数量: ${tweets.length}\n\n`;
+        
+        tweets.forEach((tweet, tweetIndex) => {
+          structuredContent += `推文 ${tweetIndex + 1}:\n`;
+          structuredContent += `内容: ${tweet.text}\n`;
+          structuredContent += `互动数据: 转发(${tweet.metrics.retweet}) | 回复(${tweet.metrics.reply}) | 点赞(${tweet.metrics.like})\n`;
+          structuredContent += `---\n`;
+        });
+        structuredContent += '\n';
+      });
 
-      const prompt = `请以科技主编的视角总结以下推文内容，可以详细介绍，要求：
+      const prompt = `采用结构化的形式,按照每个抓取的url分组,总结内容
 
-1. 内容要求：
-   - 交代清楚背景信息
-   - 主语必须是人或机构组织（如果是人要带上身份/职位）
-   - 使用简单易懂的中文，避免专业术语
-   - 纯文本输出，不要使用markdown格式
-   - 在总结中保留关键原文引用，使用引号标注，并注明来源推文地址
+=== 抓取数据 ===
 
-2. 信息来源要求：
-   - 优先使用推文中的直接信息
-   - 如需补充外部信息，必须引用网络公开信息，并标注具体来源链接，请直接用链接URL
-   - 对于推测性内容，必须明确标注"推测"或"可能"
-   - 对于有争议的内容，需要标注不同观点及其来源
-   - 所有引用的外部信息必须是可公开访问的网络资料
-   - 每个重要观点或信息都要标注来源推文链接，方便追溯原文
-
-${combinedText}`;
+${structuredContent}`;
 
       promptData.value = prompt;
       promptData.style.display = 'block';
