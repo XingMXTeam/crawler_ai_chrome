@@ -180,6 +180,19 @@ const TWITTER_URLS = [
     "https://x.com/chetanp",
 
     "https://x.com/XDevelopers",
+    "https://x.com/Saboo_Shubham_",
+    "https://x.com/NewsFromGoogle",
+    "https://x.com/AnthropicAI",
+    "https://x.com/GoogleAIStudio",
+    "https://x.com/GoogleAIStudio",
+    "https://x.com/paulg/",
+    "https://x.com/ibab",
+    "https://x.com/JustinLin610",
+    "https://x.com/EpochAIResearch",
+    "https://x.com/LangChain",
+    "https://x.com/thedankoe",
+    "https://x.com/elonmusk",
+    "https://x.com/karpathy"
 ]
 
 // 从storage中恢复状态
@@ -770,4 +783,4 @@ window.addEventListener('load', async () => {
     } catch (error) {
         console.error('[DB] Failed to initialize database:', error);
     }
-});
+});,
