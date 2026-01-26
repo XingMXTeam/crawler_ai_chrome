@@ -192,7 +192,13 @@ const TWITTER_URLS = [
     "https://x.com/LangChain",
     "https://x.com/thedankoe",
     "https://x.com/elonmusk",
-    "https://x.com/karpathy"
+    "https://x.com/karpathy",
+    "https://x.com/Google",
+    "https://x.com/bcherny",
+    "https://x.com/antigravity",
+    "https://x.com/DeepLearningAI",
+    "https://x.com/LisaSu",
+    "https://x.com/rough__sea"
 ]
 
 // 从storage中恢复状态
