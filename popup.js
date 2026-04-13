@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const progressPercentage = document.getElementById('progressPercentage');
   const progressFill = document.getElementById('progressFill');
   const clearCacheButton = document.getElementById('clearCacheButton');
-  const dataSourceSelect = document.getElementById('dataSource');
+  const timeRangeSelect = document.getElementById('timeRange');
   
   let isCrawling = false;
   let retryCount = 0;
@@ -101,6 +101,37 @@ document.addEventListener('DOMContentLoaded', function() {
     statusDiv.style.color = isError ? '#dc3545' : '#495057';
   }
   
+  // 根据时间范围过滤数据
+  function filterByTimeRange(data) {
+    const timeRange = timeRangeSelect.value;
+    if (timeRange === 'all') return data;
+
+    const now = new Date();
+    let cutoff;
+    switch (timeRange) {
+      case 'today':
+        cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case '3days':
+        cutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+        break;
+      case '1week':
+        cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '1month':
+        cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        return data;
+    }
+
+    return data.filter(tweet => {
+      if (!tweet.timestamp) return false;
+      const tweetDate = new Date(tweet.timestamp);
+      return tweetDate >= cutoff;
+    });
+  }
+
   // 生成Prompt
   async function generatePrompt(data) {
     try {
@@ -111,6 +142,13 @@ document.addEventListener('DOMContentLoaded', function() {
       data = response && response.data ? response.data : [];
       if (!data || data.length === 0) {
         updateStatus('No data available to generate prompt', true);
+        return;
+      }
+
+      // 根据时间范围过滤
+      data = filterByTimeRange(data);
+      if (data.length === 0) {
+        updateStatus('No tweets found in the selected time range', true);
         return;
       }
 
@@ -177,41 +215,80 @@ ${structuredContent}`;
     await generatePrompt(currentData);
   });
   
-  // 发送消息到content script
-  function sendMessageToContentScript(message, retry = true) {
-    // 将当前数据源附加到消息中，保持最小改动：不改变现有调用方
-    const enrichedMessage = {
-      ...message,
-      dataSource: dataSourceSelect ? dataSourceSelect.value : 'ai'
-    };
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (chrome.runtime.lastError) {
-        updateStatus('Error: ' + chrome.runtime.lastError.message, true);
-        return;
+  // 检查content script是否已加载，如果没有则注入
+  async function ensureContentScriptLoaded(tabId) {
+    try {
+      // 尝试ping content script
+      await chrome.tabs.sendMessage(tabId, {type: 'PING'});
+      return true;
+    } catch (error) {
+      // Content script未加载，尝试注入
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['db.js', 'content.js']
+        });
+        // 等待一小段时间让脚本初始化
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return true;
+      } catch (injectError) {
+        console.error('Failed to inject content script:', injectError);
+        return false;
       }
+    }
+  }
+  
+  // 发送消息到content script
+  async function sendMessageToContentScript(message, retry = true) {
+    try {
+      const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+      
       if (!tabs[0]) {
         updateStatus('Error: No active tab found', true);
         return;
       }
       
-      chrome.tabs.sendMessage(tabs[0].id, enrichedMessage, function(response) {
-        if (chrome.runtime.lastError) {
-          if (retry && retryCount < MAX_RETRIES) {
-            retryCount++;
-            updateStatus(`Retrying... (${retryCount}/${MAX_RETRIES})`);
-            setTimeout(() => sendMessageToContentScript(message, true), 1000);
-          } else {
-            updateStatus('Error: ' + chrome.runtime.lastError.message, true);
-            retryCount = 0;
-          }
-          return;
-        }
+      const tab = tabs[0];
+      
+      // 检查是否在正确的域名上
+      if (!tab.url || (!tab.url.includes('twitter.com') && !tab.url.includes('x.com'))) {
+        updateStatus('Error: Please navigate to twitter.com or x.com first', true);
+        return;
+      }
+      
+      // 确保content script已加载
+      const scriptLoaded = await ensureContentScriptLoaded(tab.id);
+      if (!scriptLoaded && retry && retryCount < MAX_RETRIES) {
+        retryCount++;
+        updateStatus(`Retrying... (${retryCount}/${MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return sendMessageToContentScript(message, true);
+      }
+      
+      if (!scriptLoaded) {
+        updateStatus('Error: Could not load content script. Try refreshing the page.', true);
         retryCount = 0;
-        if (response && response.status) {
-          updateStatus(`Message sent successfully: ${response.status}`);
-        }
-      });
-    });
+        return;
+      }
+      
+      // 发送消息
+      const response = await chrome.tabs.sendMessage(tab.id, message);
+      retryCount = 0;
+      
+      if (response && response.status) {
+        updateStatus(`Message sent successfully: ${response.status}`);
+      }
+    } catch (error) {
+      if (retry && retryCount < MAX_RETRIES) {
+        retryCount++;
+        updateStatus(`Retrying... (${retryCount}/${MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return sendMessageToContentScript(message, true);
+      } else {
+        updateStatus('Error: ' + error.message, true);
+        retryCount = 0;
+      }
+    }
   }
   
   // 开始爬取
@@ -231,7 +308,7 @@ ${structuredContent}`;
     currentUrlIndex = 0;
     updateProgress(0, 0);
     
-    sendMessageToContentScript({type: 'START_CRAWLING'});
+    sendMessageToContentScript({type: 'START_CRAWLING', timeRange: timeRangeSelect.value});
   });
   
   // 停止爬取

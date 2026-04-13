@@ -151,6 +151,33 @@
         .prompt-button:hover:not(:disabled) {
             background-color: #5a32a3;
         }
+        .filter-container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .filter-container label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #212529;
+            margin-right: 10px;
+        }
+        .filter-container select {
+            padding: 6px 12px;
+            font-size: 14px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background-color: #fff;
+            color: #495057;
+            cursor: pointer;
+            outline: none;
+        }
+        .filter-container select:focus {
+            border-color: #1DA1F2;
+            box-shadow: 0 0 0 2px rgba(29,161,242,0.2);
+        }
     </style>
 </head>
 <body>
@@ -166,6 +193,17 @@
         <div class="progress-bar">
             <div class="progress-fill" id="progressFill"></div>
         </div>
+    </div>
+
+    <div class="filter-container">
+        <label for="timeRange">Time Range:</label>
+        <select id="timeRange">
+            <option value="all">All</option>
+            <option value="today" selected>Today</option>
+            <option value="3days">Last 3 Days</option>
+            <option value="1week">Last Week</option>
+            <option value="1month">Last Month</option>
+        </select>
     </div>
 
     <div class="button-container">

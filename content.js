@@ -3,6 +3,7 @@ let crawlingResults = [];
 let currentUrlIndex = 0;
 let isCrawling = false;
 let shouldSimulateHuman = false;  // 默认关闭模拟人类行为
+let timeRange = 'today';  // 时间范围过滤：all, today, 3days, 1week, 1month
 
 // 转发日志到popup
 function forwardLog(message, isError = false) {
@@ -210,7 +211,7 @@ function restoreState() {
         shouldSimulateHuman = false;
         crawlingResults = [];
         
-        chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'crawlingResults'], function(result) {
+        chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'crawlingResults', 'timeRange'], function(result) {
             if (chrome.runtime.lastError) {
                 console.error('[Crawler] Error restoring state:', chrome.runtime.lastError);
                 reject(chrome.runtime.lastError);
@@ -222,6 +223,7 @@ function restoreState() {
             currentUrlIndex = result.currentUrlIndex || 0;
             shouldSimulateHuman = result.shouldSimulateHuman || false;
             crawlingResults = result.crawlingResults || [];
+            timeRange = result.timeRange || 'today';
             
             console.log('[Crawler] State restored from storage:', {
                 isCrawling,
@@ -247,7 +249,8 @@ function saveState() {
         isCrawling,
         currentUrlIndex,
         shouldSimulateHuman,
-        crawlingResults
+        crawlingResults,
+        timeRange
     };
     console.log('[Crawler] Saving state to storage:', state);
     chrome.storage.local.set(state);
@@ -357,6 +360,34 @@ async function getTweetData(tweetElement) {
     }
 }
 
+// 检查推文是否在指定时间范围内
+function isTweetInTimeRange(tweetTimestamp) {
+    if (!tweetTimestamp || timeRange === 'all') return true;
+
+    const tweetDate = new Date(tweetTimestamp);
+    if (isNaN(tweetDate.getTime())) return true;  // 无法解析时间则保留
+
+    const now = new Date();
+    let cutoff;
+    switch (timeRange) {
+        case 'today':
+            cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            break;
+        case '3days':
+            cutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+            break;
+        case '1week':
+            cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        case '1month':
+            cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        default:
+            return true;
+    }
+    return tweetDate >= cutoff;
+}
+
 // 爬取当前页面的推文
 async function crawlCurrentPage() {
     try {
@@ -444,6 +475,13 @@ async function crawlCurrentPage() {
             try {
                 console.log(`[Crawler] Processing tweet ${processedCount + 1}/${tweetElements.length}`);
                 const tweetData = await getTweetData(tweetElement);
+                
+                // 检查推文是否在时间范围内
+                if (!isTweetInTimeRange(tweetData.timestamp)) {
+                    console.log(`[Crawler] Tweet skipped (out of time range ${timeRange}): ${tweetData.timestamp}`);
+                    continue;
+                }
+                
                 pageResults.push({
                     ...userInfo,
                     ...tweetData
@@ -531,7 +569,7 @@ function resetState() {
     console.error = originalConsoleError;
     
     // 重置 localStorage 中的状态
-    chrome.storage.local.remove(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'crawlingResults'], function() {
+    chrome.storage.local.remove(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'crawlingResults', 'timeRange'], function() {
         console.log('[Crawler] All states cleared from storage');
     });
     
@@ -558,7 +596,11 @@ function resetState() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log(`[Crawler] Received message: ${message.type}`);
     
-    if (message.type === 'START_CRAWLING') {
+    if (message.type === 'PING') {
+        // 简单的ping响应，用于检查content script是否已加载
+        sendResponse({ status: 'pong' });
+        return true;
+    } else if (message.type === 'START_CRAWLING') {
         console.log('[Crawler] Received start crawling command');
         // 设置数据源（默认 ai）
         CURRENT_SOURCE = (message.dataSource === 'invest') ? 'invest' : 'ai';
@@ -566,6 +608,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         shouldSimulateHuman = true;  // 开始爬取时启用模拟人类行为
         currentUrlIndex = 0;
         crawlingResults = [];
+        timeRange = message.timeRange || 'today';  // 接收时间范围设置
         saveState();
         
             // 发送进度更新（按数据源区分总数）
@@ -688,15 +731,16 @@ window.addEventListener('load', async () => {
     console.log('[Crawler] Page loaded, checking if should crawl');
     
     // 从storage中获取最新状态
-    chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman'], function(result) {
+    chrome.storage.local.get(['isCrawling', 'currentUrlIndex', 'shouldSimulateHuman', 'timeRange'], function(result) {
         console.log('[Crawler] Retrieved state from storage:', result);
         
         // 更新内存中的状态
         isCrawling = result.isCrawling || false;
         currentUrlIndex = result.currentUrlIndex || 0;
         shouldSimulateHuman = result.shouldSimulateHuman || false;
+        timeRange = result.timeRange || 'today';
         
-        console.log('[Crawler] Current state after update:', { isCrawling, currentUrlIndex, shouldSimulateHuman });
+        console.log('[Crawler] Current state after update:', { isCrawling, currentUrlIndex, shouldSimulateHuman, timeRange });
         
         if (isCrawling) {
             console.log('[Crawler] Starting crawl on page load');
