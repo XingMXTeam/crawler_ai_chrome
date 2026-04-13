@@ -50,8 +50,8 @@ console.error = function(...args) {
     forwardLog(message, true);
 };
 
-// 核心要爬取的URL列表
-const TWITTER_URLS = [
+// 核心要爬取的URL列表 - AI 数据源
+const TWITTER_URLS_AI = [
     "https://x.com/sama",
     "https://x.com/github",
     "https://x.com/gui_penedo",
@@ -492,13 +492,13 @@ async function crawlCurrentPage() {
         
         console.log(`[Crawler] Successfully crawled ${tweetElements.length} tweets`);
         
-        // 更新进度
+        // 更新进度（按数据源区分总数）
         const nextIndex = currentUrlIndex + 1;
-        console.log(`[Crawler] Updating progress: ${nextIndex}/${TWITTER_URLS.length}`);
+        console.log(`[Crawler] Updating progress: ${nextIndex}/${getUrlsBySource().length}`);
         chrome.runtime.sendMessage({
             type: 'UPDATE_PROGRESS',
             current: nextIndex,
-            total: TWITTER_URLS.length
+            total: getUrlsBySource().length
         }, function(response) {
             if (chrome.runtime.lastError) {
                 console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
@@ -560,17 +560,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     if (message.type === 'START_CRAWLING') {
         console.log('[Crawler] Received start crawling command');
+        // 设置数据源（默认 ai）
+        CURRENT_SOURCE = (message.dataSource === 'invest') ? 'invest' : 'ai';
         isCrawling = true;
         shouldSimulateHuman = true;  // 开始爬取时启用模拟人类行为
         currentUrlIndex = 0;
         crawlingResults = [];
         saveState();
         
-        // 发送进度更新
+            // 发送进度更新（按数据源区分总数）
         chrome.runtime.sendMessage({
             type: 'UPDATE_PROGRESS',
             current: 0,
-            total: TWITTER_URLS.length
+                total: getUrlsBySource().length
         }, function(response) {
             if (chrome.runtime.lastError) {
                 console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
@@ -582,7 +584,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
         // 使用setTimeout确保页面完全加载
         setTimeout(() => {
-            window.location.href = TWITTER_URLS[0];
+            window.location.href = getUrlsBySource()[0];
         }, 100);
     } else if (message.type === 'STOP_CRAWLING') {
         console.log('[Crawler] Received stop crawling command');
@@ -638,11 +640,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ status: 'simulate_human_stopped' });
     } else if (message.type === 'GET_DATA') {
         console.log('[Crawler] Received get data request');
+        // 如果消息携带数据源，切换读取数据的源（不改变正在爬取的源）
+        const requestedSource = (message.dataSource === 'invest') ? 'invest' : CURRENT_SOURCE;
         
         const getDataWithRetry = async (retries = 3) => {
             for (let i = 0; i < retries; i++) {
                 try {
-                    const data = await window.dbManager.getAllResults();
+                    // 临时使用指定数据源读取
+                    await initDB(requestedSource);
+                    const data = await getAllResults(requestedSource);
                     if (data && data.length > 0) {
                         console.log('[Crawler] Getting data from IndexedDB:', {
                             timestamp: new Date().toISOString(),
@@ -697,11 +703,11 @@ window.addEventListener('load', async () => {
             crawlCurrentPage().then(success => {
                 if (success) {
                     // 发送进度更新
-                    chrome.runtime.sendMessage({
-                        type: 'UPDATE_PROGRESS',
-                        current: currentUrlIndex + 1,
-                        total: TWITTER_URLS.length
-                    }, function(response) {
+            chrome.runtime.sendMessage({
+                type: 'UPDATE_PROGRESS',
+                current: currentUrlIndex + 1,
+                total: getUrlsBySource().length
+            }, function(response) {
                         if (chrome.runtime.lastError) {
                             console.error('[Crawler] Error sending progress update:', chrome.runtime.lastError);
                         }
@@ -710,9 +716,10 @@ window.addEventListener('load', async () => {
                     currentUrlIndex++;
                     saveState();
                     
-                    if (currentUrlIndex < TWITTER_URLS.length) {
-                        console.log(`[Crawler] Moving to next URL: ${TWITTER_URLS[currentUrlIndex]}`);
-                        window.location.href = TWITTER_URLS[currentUrlIndex];
+                    const urls = getUrlsBySource();
+                    if (currentUrlIndex < urls.length) {
+                        console.log(`[Crawler] Moving to next URL: ${urls[currentUrlIndex]}`);
+                        window.location.href = urls[currentUrlIndex];
                     } else {
                         console.log('[Crawler] Finished crawling all URLs');
                         resetState();  // 使用resetState替代单独的状态重置
@@ -746,7 +753,7 @@ window.dbManager = {
     init: async function() {
         if (this.isReady) return;
         try {
-            await initDB();  // 使用 db.js 中的 initDB
+            await initDB(CURRENT_SOURCE);  // 使用 db.js 中的 initDB，按数据源区分
             this.isReady = true;
             console.log('[DB] Database initialized successfully');
         } catch (error) {
@@ -758,26 +765,26 @@ window.dbManager = {
         if (!this.isReady) {
             await this.init();
         }
-        return saveResults(results);  // 使用 db.js 中的 saveResults
+        return saveResults(results, CURRENT_SOURCE);  // 使用 db.js 中的 saveResults
     },
     getAllResults: async function() {
         if (!this.isReady) {
             await this.init();
         }
-        return getAllResults();  // 使用 db.js 中的 getAllResults
+        return getAllResults(CURRENT_SOURCE);  // 使用 db.js 中的 getAllResults
     },
     verifyDataSaved: async function() {
         if (!this.isReady) {
             await this.init();
         }
-        const results = await getAllResults();
+        const results = await getAllResults(CURRENT_SOURCE);
         return results.length > 0;
     },
     clearAll: async function() {
         if (!this.isReady) {
             await this.init();
         }
-        return clearResults();  // 使用 db.js 中的 clearResults
+        return clearResults(CURRENT_SOURCE);  // 使用 db.js 中的 clearResults
     }
 };
 

@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const progressPercentage = document.getElementById('progressPercentage');
   const progressFill = document.getElementById('progressFill');
   const clearCacheButton = document.getElementById('clearCacheButton');
+  const dataSourceSelect = document.getElementById('dataSource');
   
   let isCrawling = false;
   let retryCount = 0;
@@ -104,7 +105,10 @@ document.addEventListener('DOMContentLoaded', function() {
   async function generatePrompt(data) {
     try {
       // 总是从content script获取最新数据
-      data = await getDataFromContentScript();
+      // 将所选数据源带给content script，以便返回对应源的数据
+      const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+      const response = await chrome.tabs.sendMessage(tab.id, {type: 'GET_DATA', dataSource: dataSourceSelect ? dataSourceSelect.value : 'ai'});
+      data = response && response.data ? response.data : [];
       if (!data || data.length === 0) {
         updateStatus('No data available to generate prompt', true);
         return;
@@ -141,7 +145,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tweets.forEach((tweet, tweetIndex) => {
           structuredContent += `推文 ${tweetIndex + 1}:\n`;
           structuredContent += `内容: ${tweet.text}\n`;
-          structuredContent += `互动数据: 转发(${tweet.metrics.retweet}) | 回复(${tweet.metrics.reply}) | 点赞(${tweet.metrics.like})\n`;
           structuredContent += `---\n`;
         });
         structuredContent += '\n';
@@ -176,6 +179,11 @@ ${structuredContent}`;
   
   // 发送消息到content script
   function sendMessageToContentScript(message, retry = true) {
+    // 将当前数据源附加到消息中，保持最小改动：不改变现有调用方
+    const enrichedMessage = {
+      ...message,
+      dataSource: dataSourceSelect ? dataSourceSelect.value : 'ai'
+    };
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (chrome.runtime.lastError) {
         updateStatus('Error: ' + chrome.runtime.lastError.message, true);
@@ -186,7 +194,7 @@ ${structuredContent}`;
         return;
       }
       
-      chrome.tabs.sendMessage(tabs[0].id, message, function(response) {
+      chrome.tabs.sendMessage(tabs[0].id, enrichedMessage, function(response) {
         if (chrome.runtime.lastError) {
           if (retry && retryCount < MAX_RETRIES) {
             retryCount++;

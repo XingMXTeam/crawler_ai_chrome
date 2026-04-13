@@ -3,10 +3,12 @@ const DB_VERSION = 1;
 const STORE_NAME = 'crawl_results';
 let dbInstance = null;  // 缓存数据库实例
 
-// 获取当前日期的数据库名称
-function getCurrentDBName() {
+// 获取当前日期的数据库名称，按数据源区分
+function getCurrentDBName(source = 'ai') {
     const today = new Date();
-    return `twitter_crawler_db_${today.toISOString().split('T')[0]}`;
+    const dateStr = today.toISOString().split('T')[0];
+    const sourceSuffix = (source === 'invest') ? 'invest' : 'ai';
+    return `twitter_crawler_db_${sourceSuffix}_${dateStr}`;
 }
 
 // 获取所有数据库名称
@@ -54,7 +56,7 @@ async function deleteOldDatabases() {
 }
 
 // 初始化数据库
-async function initDB() {
+async function initDB(source = 'ai') {
     console.log('[DB] Starting database initialization...');
     
     // 如果已经有数据库实例，直接返回
@@ -63,7 +65,7 @@ async function initDB() {
         return dbInstance;
     }
     
-    const DB_NAME = getCurrentDBName();
+    const DB_NAME = getCurrentDBName(source);
     
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -101,10 +103,10 @@ async function initDB() {
 }
 
 // 保存爬取结果
-async function saveResults(results) {
+async function saveResults(results, source = 'ai') {
     console.log('[DB] Starting to save results, count:', results.length);
     try {
-        const db = await initDB();
+        const db = await initDB(source);
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
@@ -152,10 +154,10 @@ async function saveResults(results) {
 }
 
 // 获取所有结果
-async function getAllResults() {
+async function getAllResults(source = 'ai') {
     console.log('[DB] Starting to get all results');
     try {
-        const db = await initDB();
+        const db = await initDB(source);
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readonly');
             const store = transaction.objectStore(STORE_NAME);
@@ -178,10 +180,10 @@ async function getAllResults() {
 }
 
 // 清除所有结果
-async function clearResults() {
+async function clearResults(source = 'ai') {
     console.log('[DB] Starting to clear all results');
     try {
-        const db = await initDB();
+        const db = await initDB(source);
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
